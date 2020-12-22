@@ -1,24 +1,24 @@
 language: rust
 rust:
-  - nightly
+- nightly
 cache:
   cargo: true
 install:
-  - rustup update
-  - rustup component add clippy rustfmt
-  - cargo install grcov rust-covfix
+- rustup update
+- rustup component add clippy rustfmt
+- cargo install grcov rust-covfix
 jobs:
   include:
-    - stage: unit tests
-      script:
-        - cargo test
-    - stage: check rustfmt style && run clippy
-      script:
-        - cargo clippy
-        - cargo fmt --all -- --check
-    - stage: coverage sending
-      script:
-        - bash coverage.sh ontravis sendcov
+  - stage: unit tests
+    script:
+    - cargo test
+  - stage: check rustfmt style && run clippy
+    script:
+    - cargo clippy
+    - cargo fmt --all -- --check
+  - stage: coverage sending
+    script:
+    - bash coverage.sh ontravis sendcov
 env:
   global:
-    - secure: "I1Y+hgp8SJ7T2s5pOGySepf7qoezeI7nNXL9Gn5P2w0gnvlImGhl5bF1WRKzu1IY6a6csI5AHqc54Mem5p47XxLcKC/tDCA8osrdgcNif5E0iQEXYr/lnZ0HMQlvlgwjgyS1ziKOoNLp0YcT5WYopZs7O/o0wa/UO3JNXMMlP4fViYL+Fa+qBV6pE4AfMyKJFbUlGwwQgCg8JfRNSiEaGxWm2EsZzbfgCi+8nHbQz01VdV8FfCUIZL9mvgKvu3yI+nP6H1dxha/Lu4Cg4GLJ9nJG1Qp7zCQSl838TTplCGS2rBEbMgAr9IEPotQhUWjLCD7HnzE4MwDjGZoQsUc9Urt8TgwfTLyZN4KwaLgYfds/OLVOTf//FQ8pOIAd4kZOMN+WBylF1ulDvTFNDvP7fwtI/Z3iTx2K4bnLYTUasD5zx5dh9SXYkntuKh8D7UYKkbLvkpruGuM6m54Yz1KChZ35iBAV5Nv3ZMwb4eqDgFPF0bmA9ymvtXxNTh61ItPzuYA5T2OT79uCriM5RFCtN4matKjA0YsTn1FA7zmQF0EhUqgTyncrX/NIHXLSjiColl2dCpbycj+IEA+W3lQuT71iRd7bAghpNJeEDl6oGM6KwyPg2mQJzT16oLHZaQHSDXzfX2RUUGAt9PdnDnJfSdTTneXlz8XSJaoIQS7t6so="
+    secure: Hr436FU4PMk/AlM4pmlRvAOhCQ1uw19XRGb8XH0bQ0pa3ZApvs3PFk5M/481GwxY6jJxKmhRxIRrK28SL/cS+HYB8yJ37k3t84fvSxVGU4Xp/weTUdiUP3H9JT7MMlzXEnw9kLyW7xu1R5HODu3XRRQESbz5j2JM8peUwg4zHSJ1MdX47uv5IYqv+NL9/LUgbNnTFFznd98rIRbh8S6EyBpqkRgpHzT+2vYpws2JCIRwokKyzfnkdLN1eaHKoypNl7p3+sKxQ+Sl1pEuEKhYhu9dGnw/jPwAUDjP6mDHO7lR5zcUsvExsWeX90n2PXcNtO6vHVG5l2/sacwp1ktOG5UliwRg4tYColBPl7I5llBInEdeDkhvldl3SuaLk0EzheibicgA6X28GF2JA6sGGfU+Ologuu3K1mVzzoQT0B1tB06yyQlnhFnU+jAeKJS3rMtPzMriVDHlazeDHv5bkAIA5i4vKxxSI83Nh8BmU8Z3rPahykgLb4Vhw9UvgtmHen+KrsmD88ZRbqIKZh0eUqMSxalpKzKImzUwoqvhnGTCGlIVbLwwg+kSsPzDFw1dHTmggaZIO5u0QaELBZ7tjrQ/la/vEDR7cBg73ztZ0NmcZ+pb5ZgpJRjw6QHeagXFnl/4oZZbIt0uDQ13DZ+k7+22PP3TwfLRt9aqpvYgPhA=

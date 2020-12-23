@@ -1,0 +1,16 @@
+{
+    "logGroups": [
+        {
+            "arn": "1",
+            "logGroupName": "log_group_1"            
+        },
+        {
+            "arn": "2",
+            "logGroupName": "log_group_2"            
+        },
+        {
+            "arn": "3",
+            "logGroupName": "log_group_3"            
+        }
+    ]
+}

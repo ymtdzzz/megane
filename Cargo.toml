@@ -21,3 +21,6 @@ rusoto_logs = "0.45.0"
 tokio = { version = "0.2.22", features = ["full"] }
 async-trait = "0.1.40"
 chrono = "0.4.15"
+
+[dev-dependencies]
+rusoto_mock = "0.45.0"

@@ -3,7 +3,7 @@ pub enum LogGroupEvent {
     Abort,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Event<I> {
     Input(I),
     Tick,

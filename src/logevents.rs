@@ -117,25 +117,7 @@ impl LogEvents {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn get_events(from: usize, to: usize, has_more: bool) -> Vec<FilteredLogEvent> {
-        let mut events = vec![];
-        for i in from..to {
-            let mut event = FilteredLogEvent::default();
-            event.event_id = Some(i.to_string());
-            event.message = Some(i.to_string());
-            event.timestamp = None;
-            events.push(event);
-        }
-        if has_more {
-            let mut event = FilteredLogEvent::default();
-            event.event_id = Some(MORE_LOG_EVENT_ID.clone());
-            event.message = Some(String::from(""));
-            event.timestamp = None;
-            events.push(event);
-        }
-        events
-    }
+    use crate::test_helper::get_events;
 
     #[test]
     fn test_set_items() {

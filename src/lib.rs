@@ -1,3 +1,6 @@
+#[cfg(test)]
+pub mod test_helper;
+
 pub mod client;
 pub mod constant;
 pub mod event;

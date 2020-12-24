@@ -46,30 +46,7 @@ impl LogClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rusoto_logs::LogGroup;
-    use rusoto_mock::{
-        MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
-    };
-
-    fn get_mock_client(filename: &str) -> CloudWatchLogsClient {
-        CloudWatchLogsClient::new_with(
-            MockRequestDispatcher::default()
-                .with_body(&MockResponseReader::read_response("mock_data", filename)),
-            MockCredentialsProvider,
-            Default::default(),
-        )
-    }
-
-    fn make_log_groups(from: usize, to: usize) -> Vec<LogGroup> {
-        let mut log_groups: Vec<LogGroup> = vec![];
-        for i in from..=to {
-            let mut group = LogGroup::default();
-            group.arn = Some(i.to_string());
-            group.log_group_name = Some(format!("log_group_{}", i.to_string()));
-            log_groups.push(group);
-        }
-        log_groups
-    }
+    use crate::test_helper::{get_mock_client, make_log_groups};
 
     #[tokio::test]
     async fn test_fetch_log_groups() {

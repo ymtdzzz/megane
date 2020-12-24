@@ -73,23 +73,7 @@ impl LogGroups {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn get_log_groups(from: usize, to: usize, has_more: bool) -> Vec<LogGroup> {
-        let mut groups = vec![];
-        for i in from..=to {
-            let mut group = LogGroup::default();
-            group.arn = Some(i.to_string());
-            group.log_group_name = Some(format!("log_group_{}", i.to_string()));
-            groups.push(group);
-        }
-        if has_more {
-            let mut group = LogGroup::default();
-            group.arn = Some(MORE_LOG_GROUP_ARN.clone());
-            group.log_group_name = Some(MORE_LOG_GROUP_NAME.clone());
-            groups.push(group);
-        }
-        groups
-    }
+    use crate::test_helper::get_log_groups;
 
     #[test]
     fn test_setter() {

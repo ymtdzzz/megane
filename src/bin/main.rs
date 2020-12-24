@@ -4,7 +4,8 @@ use rusoto_logs::{
     CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, FilterLogEventsRequest,
 };
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let _clap = ClapApp::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())

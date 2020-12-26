@@ -1,13 +1,8 @@
-use std::io::Stdout;
-
-use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
-    backend::CrosstermBackend,
+    backend::Backend,
     layout::{Constraint, Layout, Rect},
-    style::{Color, Style},
-    widgets::Block,
     Frame,
 };
 
@@ -19,17 +14,23 @@ enum SelectState {
     EventAreas(usize),
 }
 
-pub struct App {
-    side_menu: Box<dyn Drawable + Send>,
-    event_areas: Vec<Box<dyn Drawable + Send>>,
+pub struct App<B>
+where
+    B: Backend,
+{
+    side_menu: Box<dyn Drawable<B> + Send>,
+    event_areas: Vec<Box<dyn Drawable<B> + Send>>,
     select_state: SelectState,
 }
 
-impl App {
+impl<B> App<B>
+where
+    B: Backend,
+{
     pub async fn new(
-        side_menu: Box<dyn Drawable + Send>,
-        event_areas: Vec<Box<dyn Drawable + Send>>,
-    ) -> App {
+        side_menu: Box<dyn Drawable<B> + Send>,
+        event_areas: Vec<Box<dyn Drawable<B> + Send>>,
+    ) -> Self {
         App {
             side_menu,
             event_areas,
@@ -39,8 +40,11 @@ impl App {
 }
 
 #[async_trait]
-impl Drawable for App {
-    fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>, _area: Rect) {
+impl<B> Drawable<B> for App<B>
+where
+    B: Backend,
+{
+    fn draw(&mut self, f: &mut Frame<B>, _area: Rect) {
         let chunks = Layout::default()
             .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
             .split(f.size());

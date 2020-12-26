@@ -1,5 +1,3 @@
-use std::io::{Stdout, Write};
-
 use anyhow::Result;
 use async_trait::async_trait;
 use crossterm::{
@@ -8,21 +6,27 @@ use crossterm::{
     terminal::{disable_raw_mode, LeaveAlternateScreen},
 };
 use tokio::sync::mpsc;
-use tui::{backend::CrosstermBackend, layout::Layout, Terminal};
+use tui::{backend::Backend, layout::Layout, Terminal};
 
 use super::*;
 use crate::{app::App, event::Event, ui::Drawable};
 
-pub struct MainEventHandler {
-    terminal: Terminal<CrosstermBackend<Stdout>>,
-    app: App,
+pub struct MainEventHandler<B>
+where
+    B: Backend,
+{
+    terminal: Terminal<B>,
+    app: App<B>,
     input_rx: mpsc::Receiver<Event<KeyEvent>>,
 }
 
-impl MainEventHandler {
+impl<B> MainEventHandler<B>
+where
+    B: Backend,
+{
     pub fn new(
-        terminal: Terminal<CrosstermBackend<Stdout>>,
-        app: App,
+        terminal: Terminal<B>,
+        app: App<B>,
         input_rx: mpsc::Receiver<Event<KeyEvent>>,
     ) -> Self {
         MainEventHandler {
@@ -33,18 +37,27 @@ impl MainEventHandler {
     }
 }
 
-struct Middle<'a> {
-    app: &'a mut App,
+struct Middle<'a, B: 'a>
+where
+    B: Backend,
+{
+    app: &'a mut App<B>,
 }
 
-impl<'a> Middle<'a> {
-    fn new(app: &'a mut App) -> Self {
+impl<'a, B: 'a> Middle<'a, B>
+where
+    B: Backend,
+{
+    fn new(app: &'a mut App<B>) -> Self {
         Self { app }
     }
 }
 
 #[async_trait]
-impl EventHandler for MainEventHandler {
+impl<B: std::fmt::Write> EventHandler for MainEventHandler<B>
+where
+    B: Backend + Send,
+{
     async fn run(&mut self) -> Result<()> {
         let middle = Middle::new(&mut self.app);
         loop {

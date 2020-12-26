@@ -1,8 +1,6 @@
 use clap::{crate_authors, crate_description, crate_name, crate_version, App as ClapApp};
 use rusoto_core::Region;
-use rusoto_logs::{
-    CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, FilterLogEventsRequest,
-};
+use rusoto_logs::CloudWatchLogsClient;
 
 #[tokio::main]
 async fn main() {
@@ -12,5 +10,5 @@ async fn main() {
         .about(crate_description!())
         .get_matches();
 
-    let client = CloudWatchLogsClient::new(Region::ApNortheast1);
+    let _client = CloudWatchLogsClient::new(Region::ApNortheast1);
 }

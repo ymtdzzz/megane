@@ -1,6 +1,4 @@
-use chrono::{TimeZone, Utc};
 use rusoto_logs::FilteredLogEvent;
-use rusoto_logs::LogGroup;
 use tui::widgets::TableState;
 
 use super::constant::*;

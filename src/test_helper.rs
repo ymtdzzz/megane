@@ -3,7 +3,6 @@ use rusoto_mock::{
     MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
 };
 
-use super::*;
 use crate::constant::*;
 
 #[cfg(test)]

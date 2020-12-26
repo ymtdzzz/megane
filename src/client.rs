@@ -1,10 +1,5 @@
-use anyhow::{Error, Result};
-use rusoto_logs::{
-    CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, FilterLogEventsRequest,
-    LogGroup,
-};
-
-use super::loggroups::LogGroups;
+use anyhow::Result;
+use rusoto_logs::{CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, LogGroup};
 
 /// rusoto wrapper
 pub struct LogClient {

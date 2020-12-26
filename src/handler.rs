@@ -3,6 +3,7 @@ use async_trait::async_trait;
 
 pub mod input_event_handler;
 pub mod loggroup_event_handler;
+pub mod main_event_handler;
 
 #[async_trait]
 pub trait EventHandler {

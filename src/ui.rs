@@ -1,27 +1,25 @@
 use std::io::Stdout;
 
-use super::app::App;
+use async_trait::async_trait;
+use crossterm::event::KeyEvent;
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Layout},
+    layout::{Constraint, Layout, Rect},
     style::{Color, Style},
     widgets::Block,
     Frame,
 };
 
+use super::app::App;
+
 mod side_menu;
 
-/// ui module draws whole screen according to app state.
-/// It has two areas: SideMenu and MainArea.
-/// SideMenu is for showing the log groups.
-/// MainArea is for showing the log events belong to the selected log group.
-pub fn draw(f: &mut Frame<CrosstermBackend<Stdout>>, _app: &mut App) {
-    // Layout
-    let chunks = Layout::default()
-        .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
-        .split(f.size());
-    let side_menu = Block::default()
-        .title("log groups")
-        .border_style(Style::default().fg(Color::Red));
-    f.render_widget(side_menu, chunks[0]);
+#[async_trait]
+pub trait Drawable {
+    /// all components must be drawable
+    fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>, area: Rect);
+
+    /// handles input key event
+    /// and returns if parent component should handle other events or not
+    async fn handle_event(&mut self, event: KeyEvent) -> bool;
 }

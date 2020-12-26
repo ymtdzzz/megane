@@ -8,10 +8,10 @@ use crossterm::{
     terminal::{disable_raw_mode, LeaveAlternateScreen},
 };
 use tokio::sync::mpsc;
-use tui::{backend::CrosstermBackend, Terminal};
+use tui::{backend::CrosstermBackend, layout::Layout, Terminal};
 
 use super::*;
-use crate::{app::App, event::Event, ui};
+use crate::{app::App, event::Event, ui::Drawable};
 
 pub struct MainEventHandler {
     terminal: Terminal<CrosstermBackend<Stdout>>,
@@ -46,10 +46,11 @@ impl<'a> Middle<'a> {
 #[async_trait]
 impl EventHandler for MainEventHandler {
     async fn run(&mut self) -> Result<()> {
-        let mut middle = Middle::new(&mut self.app);
+        let middle = Middle::new(&mut self.app);
         loop {
             // draw ui according to app state
-            self.terminal.draw(|f| ui::draw(f, &mut middle.app))?;
+            self.terminal
+                .draw(|f| middle.app.draw(f, Layout::default().split(f.size())[0]))?;
             // update app state
             match self.input_rx.recv().await.unwrap() {
                 Event::Input(event) => match event.code {

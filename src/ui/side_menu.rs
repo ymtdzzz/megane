@@ -74,7 +74,7 @@ where
 #[cfg(test)]
 mod tests {
     use crossterm::event::{KeyCode, KeyModifiers};
-    use tui::{backend::TestBackend, buffer::Buffer, style::Color, Terminal};
+    use tui::{backend::TestBackend, buffer::Buffer, style::Color};
 
     use super::*;
     use crate::test_helper::get_test_terminal;
@@ -101,10 +101,10 @@ mod tests {
         for y in 0..10 {
             for x in 0..20 {
                 let ch = expected.get_mut(x, y);
-                if x == 4 && y == 0 {
+                if y == 0 || y == 9 {
                     ch.set_fg(color);
                 } else {
-                    if ch.symbol != " " {
+                    if ch.symbol == "│" {
                         ch.set_fg(color);
                     }
                 }

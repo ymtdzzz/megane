@@ -10,7 +10,7 @@ use crate::ui::{event_area::EventArea, side_menu::SideMenu, Drawable};
 
 /// which component selected
 enum SelectState {
-    SideMenu,
+    SideMenu(bool),
     EventAreas(usize),
 }
 
@@ -31,7 +31,7 @@ where
         App {
             side_menu,
             event_areas,
-            select_state: SelectState::SideMenu,
+            select_state: SelectState::SideMenu(true),
         }
     }
 
@@ -81,6 +81,13 @@ where
             _ => vec![],
         }
     }
+
+    pub fn toggle_side_fold(&mut self) {
+        self.select_state = match self.select_state {
+            SelectState::SideMenu(select) => SelectState::SideMenu(!select),
+            SelectState::EventAreas(idx) => SelectState::EventAreas(idx),
+        }
+    }
 }
 
 #[async_trait]
@@ -89,13 +96,23 @@ where
     B: Backend + Send,
 {
     fn draw(&mut self, f: &mut Frame<B>, _area: Rect) {
+        let (left, right) = match self.select_state {
+            SelectState::SideMenu(show) => {
+                if show {
+                    (30, 70)
+                } else {
+                    (3, 97)
+                }
+            }
+            SelectState::EventAreas(_) => (30, 70),
+        };
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
+            .constraints([Constraint::Percentage(left), Constraint::Percentage(right)].as_ref())
             .split(f.size());
         // update select state
         self.side_menu.set_select(match self.select_state {
-            SelectState::SideMenu => true,
+            SelectState::SideMenu(_) => true,
             SelectState::EventAreas(_) => false,
         });
         // draw side menu and event areas
@@ -108,7 +125,7 @@ where
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
         let solved = match self.select_state {
-            SelectState::SideMenu => self.side_menu.handle_event(event).await,
+            SelectState::SideMenu(_) => self.side_menu.handle_event(event).await,
             SelectState::EventAreas(idx) => {
                 if let Some(logarea) = self.event_areas.get_mut(idx) {
                     logarea.handle_event(event).await
@@ -120,7 +137,7 @@ where
         if !solved {
             match event.code {
                 KeyCode::Tab => {
-                    // TODO: toggle collapse side menu
+                    self.toggle_side_fold();
                 }
                 _ => {}
             }
@@ -128,3 +145,5 @@ where
         true
     }
 }
+
+

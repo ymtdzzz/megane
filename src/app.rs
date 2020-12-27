@@ -2,11 +2,11 @@ use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    layout::{Constraint, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     Frame,
 };
 
-use crate::ui::Drawable;
+use crate::ui::{side_menu::SideMenu, Drawable};
 
 /// which component selected
 enum SelectState {
@@ -18,7 +18,7 @@ pub struct App<B>
 where
     B: Backend,
 {
-    side_menu: Box<dyn Drawable<B> + Send>,
+    side_menu: SideMenu<B>,
     event_areas: Vec<Box<dyn Drawable<B> + Send>>,
     select_state: SelectState,
 }
@@ -28,7 +28,7 @@ where
     B: Backend,
 {
     pub async fn new(
-        side_menu: Box<dyn Drawable<B> + Send>,
+        side_menu: SideMenu<B>,
         event_areas: Vec<Box<dyn Drawable<B> + Send>>,
     ) -> Self {
         App {
@@ -42,12 +42,18 @@ where
 #[async_trait]
 impl<B> Drawable<B> for App<B>
 where
-    B: Backend,
+    B: Backend + Send,
 {
     fn draw(&mut self, f: &mut Frame<B>, _area: Rect) {
         let chunks = Layout::default()
-            .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
             .split(f.size());
+        // update select state
+        self.side_menu.set_select(match self.select_state {
+            SelectState::SideMenu => true,
+            SelectState::EventAreas(_) => false,
+        });
         self.side_menu.draw(f, chunks[0]);
         // TODO: log event area
     }

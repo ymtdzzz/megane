@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use crossterm::event::KeyEvent;
 use tui::{backend::Backend, layout::Rect, Frame};
 
-mod side_menu;
+pub mod side_menu;
 
 #[async_trait]
 pub trait Drawable<B>

@@ -12,7 +12,7 @@ use tui::{
 
 use crate::{constant, ui::Drawable};
 
-pub struct SideMenu<B>
+pub struct EventArea<B>
 where
     B: Backend,
 {
@@ -20,13 +20,13 @@ where
     _phantom: PhantomData<B>,
 }
 
-impl<B> SideMenu<B>
+impl<B> EventArea<B>
 where
     B: Backend,
 {
     pub fn new() -> Self {
-        SideMenu {
-            is_selected: true,
+        EventArea {
+            is_selected: false,
             _phantom: PhantomData,
         }
     }
@@ -37,7 +37,7 @@ where
 }
 
 #[async_trait]
-impl<B> Drawable<B> for SideMenu<B>
+impl<B> Drawable<B> for EventArea<B>
 where
     B: Backend + Send,
 {
@@ -49,7 +49,7 @@ where
             } else {
                 Style::default().fg(constant::DESELECTED_COLOR.clone())
             })
-            .title("Log Groups");
+            .title("Events");
 
         f.render_widget(block, area);
     }

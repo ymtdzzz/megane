@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use crossterm::event::KeyEvent;
 use tui::{backend::Backend, layout::Rect, Frame};
 
+pub mod event_area;
 pub mod side_menu;
 
 #[async_trait]

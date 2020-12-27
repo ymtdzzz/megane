@@ -6,7 +6,7 @@ use tui::{
     Frame,
 };
 
-use crate::ui::{side_menu::SideMenu, Drawable};
+use crate::ui::{event_area::EventArea, side_menu::SideMenu, Drawable};
 
 /// which component selected
 enum SelectState {
@@ -19,7 +19,7 @@ where
     B: Backend,
 {
     side_menu: SideMenu<B>,
-    event_areas: Vec<Box<dyn Drawable<B> + Send>>,
+    event_areas: Vec<EventArea<B>>,
     select_state: SelectState,
 }
 
@@ -27,14 +27,58 @@ impl<B> App<B>
 where
     B: Backend,
 {
-    pub async fn new(
-        side_menu: SideMenu<B>,
-        event_areas: Vec<Box<dyn Drawable<B> + Send>>,
-    ) -> Self {
+    pub async fn new(side_menu: SideMenu<B>, event_areas: Vec<EventArea<B>>) -> Self {
         App {
             side_menu,
             event_areas,
             select_state: SelectState::SideMenu,
+        }
+    }
+
+    pub fn split_logarea(&self, rect: Rect) -> Vec<Rect> {
+        let constaints = [Constraint::Percentage(50), Constraint::Percentage(50)];
+        let base_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(constaints.as_ref())
+            .split(rect);
+        let mut left_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(constaints.as_ref())
+            .split(base_chunks[0]);
+        let mut right_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(constaints.as_ref())
+            .split(base_chunks[1]);
+
+        match self.event_areas.len() {
+            1 => {
+                vec![left_chunks[0]
+                    .union(left_chunks[1])
+                    .union(right_chunks[0])
+                    .union(right_chunks[1])]
+            }
+            2 => {
+                vec![
+                    left_chunks[0].union(left_chunks[1]),
+                    right_chunks[0].union(right_chunks[1]),
+                ]
+            }
+            3 => {
+                vec![
+                    left_chunks[0],
+                    right_chunks[0].union(right_chunks[1]),
+                    left_chunks[1],
+                ]
+            }
+            4 => {
+                vec![
+                    left_chunks[0],
+                    right_chunks[0],
+                    left_chunks[1],
+                    right_chunks[1],
+                ]
+            }
+            _ => vec![],
         }
     }
 }
@@ -54,8 +98,12 @@ where
             SelectState::SideMenu => true,
             SelectState::EventAreas(_) => false,
         });
+        // draw side menu and event areas
         self.side_menu.draw(f, chunks[0]);
-        // TODO: log event area
+        let logarea_rects = self.split_logarea(chunks[1]);
+        for (i, v) in self.event_areas.iter_mut().enumerate() {
+            v.draw(f, logarea_rects[i]);
+        }
     }
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {

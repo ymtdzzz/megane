@@ -9,4 +9,5 @@ pub mod handler;
 pub mod logevents;
 pub mod loggroups;
 pub mod state;
+pub mod terminal;
 pub mod ui;

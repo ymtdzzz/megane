@@ -2,6 +2,7 @@ use rusoto_logs::{CloudWatchLogsClient, FilteredLogEvent, LogGroup};
 use rusoto_mock::{
     MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
 };
+use tui::{backend::TestBackend, buffer::Buffer, style::Color, Terminal};
 
 use crate::constant::*;
 
@@ -60,4 +61,9 @@ pub fn get_events(from: usize, to: usize, has_more: bool) -> Vec<FilteredLogEven
         events.push(event);
     }
     events
+}
+
+pub fn get_test_terminal(width: u16, height: u16) -> Terminal<TestBackend> {
+    let backend = TestBackend::new(width, height);
+    Terminal::new(backend).unwrap()
 }

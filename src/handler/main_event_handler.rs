@@ -45,8 +45,7 @@ impl EventHandler for MainEventHandler {
         let middle = Middle::new(&mut self.app);
         loop {
             // draw ui according to app state
-            self.terminal
-                .draw(|f| middle.app.draw(f, Rect::default()))?;
+            self.terminal.draw(|f| middle.app.draw(f, f.size()))?;
             // update app state
             match self.input_rx.recv().await.unwrap() {
                 Event::Input(event) => match event.code {

@@ -1,19 +1,8 @@
-use std::{
-    io::{stdout, Stdout, Write},
-    time::Duration,
-};
+use std::{io::Stdout, time::Duration};
 
 use anyhow::Result;
 use clap::{crate_authors, crate_description, crate_name, crate_version, App as ClapApp};
-use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use rusoto_core::Region;
-use rusoto_logs::CloudWatchLogsClient;
-use scopeguard;
-use tui::{backend::CrosstermBackend, Terminal};
+use tui::backend::CrosstermBackend;
 
 use megane::{
     app::App,

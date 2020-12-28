@@ -4,7 +4,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc;
-use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
+use tui::{backend::CrosstermBackend, Terminal};
 
 use super::*;
 use crate::{app::App, event::Event, terminal::teardown_terminal, ui::Drawable};

@@ -2,7 +2,7 @@ use rusoto_logs::{CloudWatchLogsClient, FilteredLogEvent, LogGroup};
 use rusoto_mock::{
     MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
 };
-use tui::{backend::TestBackend, buffer::Buffer, style::Color, Terminal};
+use tui::{backend::TestBackend, Terminal};
 
 use crate::constant::*;
 

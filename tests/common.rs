@@ -3,7 +3,6 @@ use rusoto_mock::{
     MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
 };
 
-#[ignore = "dead_code"]
 pub fn get_mock_client(filename: &str) -> CloudWatchLogsClient {
     CloudWatchLogsClient::new_with(
         MockRequestDispatcher::default()

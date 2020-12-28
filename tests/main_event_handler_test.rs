@@ -1,15 +1,11 @@
-use std::io::{Stdout, Write};
-
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc;
-use tui::backend::CrosstermBackend;
 
 use megane::{
     app::App,
     event::Event,
     handler::{main_event_handler::MainEventHandler, EventHandler},
     terminal::setup_terminal,
-    ui::{event_area::EventArea, side_menu::SideMenu},
 };
 
 #[tokio::test]

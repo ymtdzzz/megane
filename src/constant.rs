@@ -7,4 +7,5 @@ lazy_static! {
     pub static ref MORE_LOG_EVENT_ID: String = String::from("999");
     pub static ref DESELECTED_COLOR: Color = Color::White;
     pub static ref SELECTED_COLOR: Color = Color::Yellow;
+    pub static ref MAX_LOG_GROUP_SELECTION: usize = 4;
 }

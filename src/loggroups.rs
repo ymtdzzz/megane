@@ -80,6 +80,40 @@ impl LogGroups {
     pub fn get_state(&self) -> ListState {
         self.state.clone()
     }
+
+    pub fn get_current_idx(&self) -> Option<usize> {
+        self.state.selected()
+    }
+
+    pub fn next(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                if self.items.len() > 0 {
+                    self.state.select(Some(s.saturating_add(1)));
+                } else {
+                    self.state.select(None);
+                }
+            }
+            None => {
+                if self.items.len() > 0 {
+                    self.state.select(Some(0));
+                } else {
+                    self.state.select(None);
+                }
+            }
+        }
+    }
+
+    pub fn previous(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                self.state.select(Some(s.saturating_sub(1)));
+            }
+            None => {
+                self.state.select(None);
+            }
+        };
+    }
 }
 
 #[cfg(test)]

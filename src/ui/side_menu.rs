@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
     layout::Rect,
@@ -21,6 +21,7 @@ where
 {
     state: Arc<Mutex<LogGroupsState>>,
     is_selected: bool,
+    selected_log_groups: Vec<String>,
     _phantom: PhantomData<B>,
 }
 
@@ -32,12 +33,17 @@ where
         SideMenu {
             state,
             is_selected: true,
+            selected_log_groups: vec![],
             _phantom: PhantomData,
         }
     }
 
     pub fn set_select(&mut self, select: bool) {
         self.is_selected = select;
+    }
+
+    pub fn selected_log_groups(&self) -> &Vec<String> {
+        self.selected_log_groups.as_ref()
     }
 }
 
@@ -49,6 +55,7 @@ where
         SideMenu {
             state: Arc::new(Mutex::new(LogGroupsState::new())),
             is_selected: false,
+            selected_log_groups: vec![],
             _phantom: PhantomData,
         }
     }
@@ -81,7 +88,30 @@ where
         f.render_stateful_widget(list_block, area, &mut list_state);
     }
 
-    async fn handle_event(&mut self, _event: KeyEvent) -> bool {
+    async fn handle_event(&mut self, event: KeyEvent) -> bool {
+        if self.is_selected {
+            let mut state = self.state.try_lock();
+            match event.code {
+                KeyCode::Down => match state.as_mut() {
+                    Ok(s) => s.log_groups.next(),
+                    Err(_) => {}
+                },
+                KeyCode::Up => match state.as_mut() {
+                    Ok(s) => s.log_groups.previous(),
+                    Err(_) => {}
+                },
+                KeyCode::Enter => match state.as_mut() {
+                    Ok(s) => {
+                        if let Some(idx) = s.log_groups.get_current_idx() {
+                            s.select(idx);
+                            self.selected_log_groups = s.get_selected_log_group_names();
+                        }
+                    }
+                    Err(_) => {}
+                },
+                _ => {}
+            }
+        }
         false
     }
 }

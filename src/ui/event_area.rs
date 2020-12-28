@@ -16,6 +16,7 @@ pub struct EventArea<B>
 where
     B: Backend,
 {
+    log_group_name: String,
     is_selected: bool,
     _phantom: PhantomData<B>,
 }
@@ -24,8 +25,9 @@ impl<B> EventArea<B>
 where
     B: Backend,
 {
-    pub fn new() -> Self {
+    pub fn new(log_group_name: String) -> Self {
         EventArea {
+            log_group_name,
             is_selected: false,
             _phantom: PhantomData,
         }
@@ -33,6 +35,10 @@ where
 
     pub fn set_select(&mut self, select: bool) {
         self.is_selected = select;
+    }
+
+    pub fn log_group_name(&self) -> &str {
+        self.log_group_name.as_str()
     }
 }
 
@@ -42,6 +48,7 @@ where
 {
     fn default() -> Self {
         EventArea {
+            log_group_name: String::from("Events"),
             is_selected: false,
             _phantom: PhantomData,
         }
@@ -61,7 +68,7 @@ where
             } else {
                 Style::default().fg(constant::DESELECTED_COLOR.clone())
             })
-            .title("Events");
+            .title(self.log_group_name.as_ref());
 
         f.render_widget(block, area);
     }

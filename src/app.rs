@@ -155,6 +155,41 @@ where
                 KeyCode::Tab => {
                     self.toggle_side_fold();
                 }
+                KeyCode::Enter => {
+                    if let SelectState::SideMenu = self.select_state {
+                        // log group selection updated
+                        let current_log_groups = self
+                            .event_areas
+                            .iter()
+                            .map(|i| i.log_group_name())
+                            .collect::<Vec<&str>>();
+                        let log_groups_to_create = self
+                            .side_menu
+                            .selected_log_groups()
+                            .iter()
+                            .filter(|group| !current_log_groups.contains(&group.as_str()))
+                            .collect::<Vec<&String>>();
+                        let mut idx_to_remove = vec![];
+                        current_log_groups
+                            .iter()
+                            .enumerate()
+                            .for_each(|(i, group)| {
+                                if !self
+                                    .side_menu
+                                    .selected_log_groups()
+                                    .contains(&group.to_string())
+                                {
+                                    idx_to_remove.push(i);
+                                }
+                            });
+                        for i in idx_to_remove {
+                            self.event_areas.remove(i);
+                        }
+                        for i in log_groups_to_create {
+                            self.event_areas.push(EventArea::new(i.to_string()));
+                        }
+                    }
+                }
                 _ => {}
             }
         }

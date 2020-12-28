@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
         let _ = input_event_handler.run().await;
     });
 
-    let app: App<CrosstermBackend<Stdout>> = App::new(SideMenu::new(), vec![]).await;
+    let app: App<CrosstermBackend<Stdout>> = App::new(SideMenu::new(), vec![], false).await;
 
     terminal.clear()?;
 

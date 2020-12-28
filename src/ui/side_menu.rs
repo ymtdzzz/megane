@@ -122,7 +122,7 @@ mod tests {
     use tui::{backend::TestBackend, buffer::Buffer, style::Color};
 
     use super::*;
-    use crate::test_helper::get_test_terminal;
+    use crate::{loggroups::LogGroups, state::loggroups_state::LogGroupsState, test_helper::*};
 
     fn test_case(side_menu: &mut SideMenu<TestBackend>, color: Color, lines: Vec<&str>) {
         let mut terminal = get_test_terminal(20, 10);
@@ -174,9 +174,25 @@ mod tests {
     #[tokio::test]
     async fn test_handle_event() {
         let mut side_menu: SideMenu<TestBackend> = SideMenu::default();
+        side_menu.is_selected = true;
+        let state = Arc::new(Mutex::new(LogGroupsState::new()));
+        state.lock().unwrap().log_groups = LogGroups::new(get_log_groups(0, 3, false));
+        state.lock().unwrap().log_groups.next();
+        side_menu.state = Arc::clone(&state);
+
         assert!(
             !side_menu
                 .handle_event(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE))
+                .await
+        );
+        assert!(
+            !side_menu
+                .handle_event(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+                .await
+        );
+        assert!(
+            !side_menu
+                .handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
                 .await
         );
     }

@@ -25,3 +25,15 @@ pub fn teardown_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> R
     terminal.show_cursor()?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_setup_and_teardown_terminal() {
+        // Whether the terminal could be set up or not on this machine.
+        let mut terminal = setup_terminal().unwrap();
+        assert!(teardown_terminal(&mut terminal).is_ok());
+    }
+}

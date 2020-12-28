@@ -53,7 +53,6 @@ impl EventHandler for MainEventHandler {
                         teardown_terminal(&mut self.terminal)?;
                         break;
                     }
-                    // TODO: delegate handling key input to app
                     _ => {
                         middle.app.handle_event(event).await;
                     }

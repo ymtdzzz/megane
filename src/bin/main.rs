@@ -60,8 +60,13 @@ async fn main() -> Result<()> {
     let _ = logg_inst_tx.send(LogGroupEvent::FetchLogGroups).await;
 
     // setup app
-    let app: App<CrosstermBackend<Stdout>> =
-        App::new(SideMenu::new(Arc::clone(&loggroup_state)), vec![], false).await;
+    let app: App<CrosstermBackend<Stdout>> = App::new(
+        SideMenu::new(Arc::clone(&loggroup_state)),
+        vec![],
+        false,
+        false,
+    )
+    .await;
 
     terminal.clear()?;
 

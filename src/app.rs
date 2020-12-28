@@ -3,6 +3,8 @@ use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Style},
+    widgets::{Block, Borders},
     Frame,
 };
 
@@ -21,6 +23,7 @@ where
     side_menu: SideMenu<B>,
     event_areas: Vec<EventArea<B>>,
     select_state: SelectState,
+    show_help: bool,
     fold: bool,
 }
 
@@ -28,11 +31,17 @@ impl<B> App<B>
 where
     B: Backend,
 {
-    pub async fn new(side_menu: SideMenu<B>, event_areas: Vec<EventArea<B>>, fold: bool) -> Self {
+    pub async fn new(
+        side_menu: SideMenu<B>,
+        event_areas: Vec<EventArea<B>>,
+        show_help: bool,
+        fold: bool,
+    ) -> Self {
         App {
             side_menu,
             event_areas,
             select_state: SelectState::SideMenu,
+            show_help,
             fold,
         }
     }
@@ -87,6 +96,10 @@ where
     pub fn toggle_side_fold(&mut self) {
         self.fold = !self.fold;
     }
+
+    pub fn toggle_show_help(&mut self) {
+        self.show_help = !self.show_help;
+    }
 }
 
 impl<B> Default for App<B>
@@ -98,6 +111,7 @@ where
             side_menu: SideMenu::default(),
             event_areas: vec![],
             select_state: SelectState::SideMenu,
+            show_help: false,
             fold: false,
         }
     }
@@ -131,11 +145,21 @@ where
                 }
             })
         }
-        // draw side menu and event areas
-        self.side_menu.draw(f, chunks[0]);
-        let event_area_rects = self.split_event_area(chunks[1]);
-        for (i, v) in self.event_areas.iter_mut().enumerate() {
-            v.draw(f, event_area_rects[i]);
+        if self.show_help {
+            let chunk = Layout::default()
+                .constraints([Constraint::Percentage(100)])
+                .split(f.size());
+            let block = Block::default()
+                .title("HELP".to_string())
+                .borders(Borders::ALL);
+            f.render_widget(block, chunk[0]);
+        } else {
+            // draw side menu and event areas
+            self.side_menu.draw(f, chunks[0]);
+            let event_area_rects = self.split_event_area(chunks[1]);
+            for (i, v) in self.event_areas.iter_mut().enumerate() {
+                v.draw(f, event_area_rects[i]);
+            }
         }
     }
 
@@ -152,6 +176,9 @@ where
         };
         if !solved {
             match event.code {
+                KeyCode::Char('?') => {
+                    self.toggle_show_help();
+                }
                 KeyCode::Tab => {
                     self.toggle_side_fold();
                 }

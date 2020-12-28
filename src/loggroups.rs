@@ -68,6 +68,52 @@ impl LogGroups {
             .cloned()
             .collect();
     }
+
+    pub fn get_all_names(&self) -> Vec<&str> {
+        self.items
+            .iter()
+            .filter(|i| i.log_group_name.is_some())
+            .map(|i| i.log_group_name.as_ref().unwrap().as_str())
+            .collect::<Vec<&str>>()
+    }
+
+    pub fn get_state(&self) -> ListState {
+        self.state.clone()
+    }
+
+    pub fn get_current_idx(&self) -> Option<usize> {
+        self.state.selected()
+    }
+
+    pub fn next(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                if self.items.len() > 0 {
+                    self.state.select(Some(s.saturating_add(1)));
+                } else {
+                    self.state.select(None);
+                }
+            }
+            None => {
+                if self.items.len() > 0 {
+                    self.state.select(Some(0));
+                } else {
+                    self.state.select(None);
+                }
+            }
+        }
+    }
+
+    pub fn previous(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                self.state.select(Some(s.saturating_sub(1)));
+            }
+            None => {
+                self.state.select(None);
+            }
+        };
+    }
 }
 
 #[cfg(test)]

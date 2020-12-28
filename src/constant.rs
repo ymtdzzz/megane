@@ -8,4 +8,5 @@ lazy_static! {
     pub static ref DESELECTED_COLOR: Color = Color::White;
     pub static ref SELECTED_COLOR: Color = Color::Yellow;
     pub static ref MAX_LOG_GROUP_SELECTION: usize = 4;
+    pub static ref HELP_INSTRUCTION: String = String::from("'?' to help");
 }

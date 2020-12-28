@@ -313,4 +313,27 @@ mod tests {
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30);
     }
+
+    #[tokio::test]
+    async fn test_handle_event() {
+        let mut app: App<TestBackend> = App::default();
+        app.event_areas.push(EventArea::default());
+        assert!(!app.fold);
+        assert!(
+            app.handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+                .await
+        );
+        assert!(app.fold);
+        app.select_state = SelectState::EventAreas(0);
+        assert!(
+            app.handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+                .await
+        );
+        assert!(!app.fold);
+        app.event_areas.pop();
+        assert!(
+            app.handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+                .await
+        );
+    }
 }

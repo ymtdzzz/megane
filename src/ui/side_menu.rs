@@ -1,21 +1,25 @@
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use crossterm::event::KeyEvent;
 use tui::{
     backend::Backend,
     layout::Rect,
-    style::Style,
-    widgets::{Block, Borders},
+    style::{Modifier, Style},
+    widgets::{Block, Borders, List, ListState},
     Frame,
 };
 
-use crate::{constant, ui::Drawable};
+use crate::{constant, state::loggroups_state::LogGroupsState, ui::Drawable};
 
 pub struct SideMenu<B>
 where
     B: Backend,
 {
+    state: Arc<Mutex<LogGroupsState>>,
     is_selected: bool,
     _phantom: PhantomData<B>,
 }
@@ -24,8 +28,9 @@ impl<B> SideMenu<B>
 where
     B: Backend,
 {
-    pub fn new() -> Self {
+    pub fn new(state: Arc<Mutex<LogGroupsState>>) -> Self {
         SideMenu {
+            state,
             is_selected: true,
             _phantom: PhantomData,
         }
@@ -42,6 +47,7 @@ where
 {
     fn default() -> Self {
         SideMenu {
+            state: Arc::new(Mutex::new(LogGroupsState::new())),
             is_selected: false,
             _phantom: PhantomData,
         }
@@ -54,7 +60,12 @@ where
     B: Backend + Send,
 {
     fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
-        let block = Block::default()
+        let mut state = self.state.try_lock();
+        let (list_items, mut list_state) = match state.as_mut() {
+            Ok(s) => s.get_list_items(),
+            Err(_) => (vec![], ListState::default()),
+        };
+        let base_block = Block::default()
             .borders(Borders::ALL)
             .border_style(if self.is_selected {
                 Style::default().fg(constant::SELECTED_COLOR.clone())
@@ -62,8 +73,12 @@ where
                 Style::default().fg(constant::DESELECTED_COLOR.clone())
             })
             .title("Log Groups");
+        let list_block = List::new(list_items)
+            .block(base_block)
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_symbol(">> ");
 
-        f.render_widget(block, area);
+        f.render_stateful_widget(list_block, area, &mut list_state);
     }
 
     async fn handle_event(&mut self, _event: KeyEvent) -> bool {

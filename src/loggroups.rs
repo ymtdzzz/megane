@@ -68,6 +68,18 @@ impl LogGroups {
             .cloned()
             .collect();
     }
+
+    pub fn get_all_names(&self) -> Vec<&str> {
+        self.items
+            .iter()
+            .filter(|i| i.log_group_name.is_some())
+            .map(|i| i.log_group_name.as_ref().unwrap().as_str())
+            .collect::<Vec<&str>>()
+    }
+
+    pub fn get_state(&self) -> ListState {
+        self.state.clone()
+    }
 }
 
 #[cfg(test)]

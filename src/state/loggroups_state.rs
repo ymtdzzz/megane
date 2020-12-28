@@ -1,3 +1,5 @@
+use tui::widgets::{ListItem, ListState};
+
 use crate::loggroups::*;
 
 /// This struct is for managing log groups state.
@@ -12,6 +14,16 @@ impl LogGroupsState {
             log_groups: LogGroups::new(vec![]),
             is_fetching: false,
         }
+    }
+
+    pub fn get_list_items(&self) -> (Vec<ListItem>, ListState) {
+        let items = self
+            .log_groups
+            .get_all_names()
+            .iter()
+            .map(|i| ListItem::new(i.to_owned()))
+            .collect::<Vec<ListItem>>();
+        (items, self.log_groups.get_state())
     }
 }
 

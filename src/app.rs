@@ -183,7 +183,9 @@ where
                                 }
                             });
                         for i in idx_to_remove {
-                            self.event_areas.remove(i);
+                            if self.event_areas.len() > i {
+                                self.event_areas.remove(i);
+                            }
                         }
                         for i in log_groups_to_create {
                             self.event_areas.push(EventArea::new(i.to_string()));
@@ -350,7 +352,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_event() {
+    async fn test_handle_event_basis() {
         let mut app: App<TestBackend> = App::default();
         app.event_areas.push(EventArea::default());
         assert!(!app.fold);
@@ -368,6 +370,19 @@ mod tests {
         app.event_areas.pop();
         assert!(
             app.handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+                .await
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handler_event_update_eventarea() {
+        let mut app: App<TestBackend> = App::default();
+        app.event_areas
+            .push(EventArea::new(String::from("log_group_1")));
+        app.event_areas
+            .push(EventArea::new(String::from("log_group_2")));
+        assert!(
+            app.handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
                 .await
         );
     }

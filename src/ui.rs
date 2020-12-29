@@ -4,6 +4,7 @@ use tui::{backend::Backend, layout::Rect, Frame};
 
 pub mod event_area;
 pub mod side_menu;
+pub mod status_bar;
 
 #[async_trait]
 pub trait Drawable<B>

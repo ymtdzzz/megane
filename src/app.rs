@@ -3,12 +3,12 @@ use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
-    widgets::{Block, Borders},
     Frame,
 };
 
-use crate::ui::{event_area::EventArea, side_menu::SideMenu, status_bar::StatusBar, Drawable};
+use crate::ui::{
+    event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable,
+};
 
 /// which component selected
 enum SelectState {
@@ -26,6 +26,7 @@ where
     select_state: SelectState,
     show_help: bool,
     fold: bool,
+    help: Help<B>,
 }
 
 impl<B> App<B>
@@ -46,6 +47,7 @@ where
             select_state: SelectState::SideMenu,
             show_help,
             fold,
+            help: Help::default(),
         }
     }
 
@@ -117,6 +119,7 @@ where
             select_state: SelectState::SideMenu,
             show_help: false,
             fold: false,
+            help: Help::default(),
         }
     }
 }
@@ -161,10 +164,7 @@ where
             let chunk = Layout::default()
                 .constraints([Constraint::Percentage(100)])
                 .split(f.size());
-            let block = Block::default()
-                .title("HELP".to_string())
-                .borders(Borders::ALL);
-            f.render_widget(block, chunk[0]);
+            self.help.draw(f, chunk[0]);
         } else {
             // draw side menu and event areas
             self.side_menu.draw(f, chunks[0]);

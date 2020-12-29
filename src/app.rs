@@ -8,7 +8,7 @@ use tui::{
     Frame,
 };
 
-use crate::ui::{event_area::EventArea, side_menu::SideMenu, Drawable};
+use crate::ui::{event_area::EventArea, side_menu::SideMenu, status_bar::StatusBar, Drawable};
 
 /// which component selected
 enum SelectState {
@@ -22,6 +22,7 @@ where
 {
     side_menu: SideMenu<B>,
     event_areas: Vec<EventArea<B>>,
+    status_bar: StatusBar<B>,
     select_state: SelectState,
     show_help: bool,
     fold: bool,
@@ -34,12 +35,14 @@ where
     pub async fn new(
         side_menu: SideMenu<B>,
         event_areas: Vec<EventArea<B>>,
+        status_bar: StatusBar<B>,
         show_help: bool,
         fold: bool,
     ) -> Self {
         App {
             side_menu,
             event_areas,
+            status_bar,
             select_state: SelectState::SideMenu,
             show_help,
             fold,
@@ -110,6 +113,7 @@ where
         App {
             side_menu: SideMenu::default(),
             event_areas: vec![],
+            status_bar: StatusBar::default(),
             select_state: SelectState::SideMenu,
             show_help: false,
             fold: false,
@@ -124,10 +128,18 @@ where
 {
     fn draw(&mut self, f: &mut Frame<B>, _area: Rect) {
         let (left, right) = if self.fold { (3, 97) } else { (30, 70) };
+        // base_chunks[0] - side menu and event area
+        // base_chunks[1] - status bar area
+        let base_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Max(100), Constraint::Length(2)].as_ref())
+            .split(f.size());
+        // chunks[0] - side menu
+        // chunks[1] - event area
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(left), Constraint::Percentage(right)].as_ref())
-            .split(f.size());
+            .split(base_chunks[0]);
         // update select state
         self.side_menu.set_select(match self.select_state {
             SelectState::SideMenu => true,
@@ -145,22 +157,13 @@ where
                 }
             })
         }
-        if self.show_help {
-            let chunk = Layout::default()
-                .constraints([Constraint::Percentage(100)])
-                .split(f.size());
-            let block = Block::default()
-                .title("HELP".to_string())
-                .borders(Borders::ALL);
-            f.render_widget(block, chunk[0]);
-        } else {
-            // draw side menu and event areas
-            self.side_menu.draw(f, chunks[0]);
-            let event_area_rects = self.split_event_area(chunks[1]);
-            for (i, v) in self.event_areas.iter_mut().enumerate() {
-                v.draw(f, event_area_rects[i]);
-            }
+        // draw side menu and event areas
+        self.side_menu.draw(f, chunks[0]);
+        let event_area_rects = self.split_event_area(chunks[1]);
+        for (i, v) in self.event_areas.iter_mut().enumerate() {
+            v.draw(f, event_area_rects[i]);
         }
+        self.status_bar.draw(f, base_chunks[1]);
     }
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
@@ -253,16 +256,16 @@ mod tests {
                 "│                            │                                                                      ",
                 "│                            │                                                                      ",
                 "│                            │                                                                      ",
-                "│                            │                                                                      ",
-                "│                            │                                                                      ",
                 "└────────────────────────────┘                                                                      ",
+                "                                                                                     initial message",
+                "                                                                                                    ",
             ]
         };
         let mut expected = Buffer::with_lines(lines);
         for y in 0..10 {
             for x in 0..100 {
                 let ch = expected.get_mut(x, y);
-                if y == 0 || y == 9 {
+                if y == 0 || y == 7 {
                     if x >= side_menu_length {
                         if ch.symbol != " " {
                             ch.set_fg(event_area_color);
@@ -270,6 +273,7 @@ mod tests {
                     } else {
                         ch.set_fg(side_menu_color);
                     }
+                } else if y == 8 {
                 } else {
                     if ch.symbol != " " {
                         if x >= side_menu_length {
@@ -340,9 +344,9 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
-            "│                            ││                                                                    │",
-            "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
+            "                                                                                     initial message",
+            "                                                                                                    ",
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 30);
         // folding side menu
@@ -355,9 +359,9 @@ mod tests {
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
-            "│ ││                                                                                               │",
-            "│ ││                                                                                               │",
             "└─┘└───────────────────────────────────────────────────────────────────────────────────────────────┘",
+            "                                                                                     initial message",
+            "                                                                                                    ",
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 3);
         // event area selected
@@ -371,9 +375,9 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
-            "│                            ││                                                                    │",
-            "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
+            "                                                                                     initial message",
+            "                                                                                                    ",
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30);
     }

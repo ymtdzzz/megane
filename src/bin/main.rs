@@ -14,14 +14,15 @@ use tui::backend::CrosstermBackend;
 use megane::{
     app::App,
     client::LogClient,
+    constant::HELP_INSTRUCTION,
     event::LogGroupEvent,
     handler::{
         input_event_handler::InputEventHandler, loggroup_event_handler::LogGroupEventHandler,
         main_event_handler::MainEventHandler, EventHandler,
     },
-    state::loggroups_state::LogGroupsState,
+    state::{loggroups_state::LogGroupsState, status_bar_state::StatusBarState},
     terminal::*,
-    ui::side_menu::SideMenu,
+    ui::{side_menu::SideMenu, status_bar::StatusBar},
 };
 
 #[tokio::main]
@@ -39,6 +40,7 @@ async fn main() -> Result<()> {
     let aws_client = CloudWatchLogsClient::new(Region::ApNortheast1);
     let log_client = LogClient::new(aws_client);
     let loggroup_state = Arc::new(Mutex::new(LogGroupsState::new()));
+    let status_bar_state = Arc::new(Mutex::new(StatusBarState::new(HELP_INSTRUCTION.clone())));
 
     // input event handling
     let (input_tx, input_rx) = tokio::sync::mpsc::channel(1);
@@ -63,6 +65,7 @@ async fn main() -> Result<()> {
     let app: App<CrosstermBackend<Stdout>> = App::new(
         SideMenu::new(Arc::clone(&loggroup_state)),
         vec![],
+        StatusBar::new(status_bar_state),
         false,
         false,
     )

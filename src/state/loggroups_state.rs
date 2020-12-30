@@ -57,6 +57,12 @@ impl LogGroupsState {
     }
 }
 
+impl Default for LogGroupsState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use tui::widgets::{ListItem, ListState};

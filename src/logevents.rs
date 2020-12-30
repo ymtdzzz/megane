@@ -103,10 +103,12 @@ impl LogEvents {
             self.items.append(&mut items_to_push);
         }
         if next_token.is_some() {
-            let mut more = FilteredLogEvent::default();
-            more.event_id = Some(MORE_LOG_EVENT_ID.clone());
-            more.message = Some(String::from(""));
-            more.timestamp = None;
+            let more = FilteredLogEvent {
+                event_id: Some(MORE_LOG_EVENT_ID.clone()),
+                message: Some(String::from("")),
+                timestamp: None,
+                ..Default::default()
+            };
             self.items.push(more);
         }
     }

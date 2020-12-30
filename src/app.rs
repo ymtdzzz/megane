@@ -11,7 +11,7 @@ use crate::ui::{
 };
 
 /// which component selected
-enum SelectState {
+pub enum SelectState {
     SideMenu,
     EventAreas(usize),
 }
@@ -151,9 +151,7 @@ where
         for (i, v) in self.event_areas.iter_mut().enumerate() {
             v.set_select(match self.select_state {
                 SelectState::SideMenu => false,
-                SelectState::EventAreas(idx) => {
-                    i == idx
-                }
+                SelectState::EventAreas(idx) => i == idx,
             })
         }
         if self.show_help {

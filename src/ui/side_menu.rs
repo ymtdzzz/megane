@@ -92,23 +92,24 @@ where
         if self.is_selected {
             let mut state = self.state.try_lock();
             match event.code {
-                KeyCode::Down => match state.as_mut() {
-                    Ok(s) => s.log_groups.next(),
-                    Err(_) => {}
-                },
-                KeyCode::Up => match state.as_mut() {
-                    Ok(s) => s.log_groups.previous(),
-                    Err(_) => {}
-                },
-                KeyCode::Enter => match state.as_mut() {
-                    Ok(s) => {
+                KeyCode::Down => {
+                    if let Ok(s) = state.as_mut() {
+                        s.log_groups.next()
+                    }
+                }
+                KeyCode::Up => {
+                    if let Ok(s) = state.as_mut() {
+                        s.log_groups.next()
+                    }
+                }
+                KeyCode::Enter => {
+                    if let Ok(s) = state.as_mut() {
                         if let Some(idx) = s.log_groups.get_current_idx() {
                             s.select(idx);
                             self.selected_log_groups = s.get_selected_log_group_names();
                         }
                     }
-                    Err(_) => {}
-                },
+                }
                 _ => {}
             }
         }

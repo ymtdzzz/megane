@@ -39,9 +39,11 @@ impl LogGroups {
         }
         self.items.append(&mut items);
         if has_next_token {
-            let mut more = LogGroup::default();
-            more.arn = Some(MORE_LOG_GROUP_ARN.clone());
-            more.log_group_name = Some(MORE_LOG_GROUP_NAME.clone());
+            let more = LogGroup {
+                arn: Some(MORE_LOG_GROUP_ARN.clone()),
+                log_group_name: Some(MORE_LOG_GROUP_NAME.clone()),
+                ..Default::default()
+            };
             self.items.push(more);
         }
     }

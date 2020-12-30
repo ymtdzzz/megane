@@ -65,7 +65,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    
+
     use tui::{backend::TestBackend, buffer::Buffer};
 
     use super::*;

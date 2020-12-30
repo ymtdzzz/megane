@@ -40,5 +40,4 @@ async fn test_run() {
             state.lock().unwrap().log_groups.get_item(i).unwrap().arn,
         );
     }
-    assert!(true);
 }

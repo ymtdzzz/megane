@@ -176,4 +176,23 @@ mod tests {
         let expected = LogGroups::new(get_log_groups(0, 5, false));
         assert_eq!(expected.items, log_groups.items);
     }
+
+    #[test]
+    fn test_state_iterate() {
+        let mut log_groups = LogGroups::new(get_log_groups(0, 2, false));
+        log_groups.next();
+        log_groups.next();
+        assert_eq!(Some(1), log_groups.state.selected());
+        log_groups.previous();
+        assert_eq!(Some(0), log_groups.state.selected());
+        let mut log_groups = LogGroups::new(get_log_groups(0, 2, false));
+        log_groups.next();
+        log_groups.items = vec![];
+        log_groups.next();
+        assert_eq!(None, log_groups.state.selected());
+        log_groups.previous();
+        assert_eq!(None, log_groups.state.selected());
+        log_groups.next();
+        assert_eq!(None, log_groups.state.selected());
+    }
 }

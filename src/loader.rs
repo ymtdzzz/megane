@@ -1,9 +1,6 @@
 use std::{
+    iter::{Cycle, Iterator},
     str::Chars,
-    iter::{
-        Iterator,
-        Cycle,
-    },
 };
 
 pub struct Loader<'a> {
@@ -37,4 +34,3 @@ mod tests {
         assert_eq!('0', loader.get_char());
     }
 }
-

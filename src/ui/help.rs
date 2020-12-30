@@ -1,9 +1,7 @@
-use std::{
-    marker::PhantomData,
-};
+use std::marker::PhantomData;
 
 use async_trait::async_trait;
-use crossterm::event::{KeyEvent};
+use crossterm::event::KeyEvent;
 use tui::{
     backend::Backend,
     layout::Rect,
@@ -39,7 +37,7 @@ where
 {
     fn default() -> Self {
         Help {
-            msg: constant::HELP_MESSAGE.clone(),
+            msg: String::from(""),
             _phantom: PhantomData,
         }
     }
@@ -66,4 +64,49 @@ where
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use tui::{backend::TestBackend, buffer::Buffer};
+
+    use super::*;
+    use crate::test_helper::get_test_terminal;
+
+    fn test_case(help: &mut Help<TestBackend>, lines: Vec<&str>) {
+        let mut terminal = get_test_terminal(20, 10);
+        let lines = if lines.len() > 0 {
+            lines
+        } else {
+            vec![
+                "┌HELP──────────────┐",
+                "│                  │",
+                "│test message      │",
+                "│12345             │",
+                "│                  │",
+                "│                  │",
+                "│                  │",
+                "│                  │",
+                "│                  │",
+                "└──────────────────┘",
+            ]
+        };
+        let mut expected = Buffer::with_lines(lines);
+        terminal
+            .draw(|f| {
+                help.draw(f, f.size());
+            })
+            .unwrap();
+        terminal.backend().assert_buffer(&expected);
+    }
+
+    #[tokio::test]
+    async fn test_draw() {
+        let mut help: Help<TestBackend> = Help::default();
+        help.msg = String::from(
+            r#"
+test message
+12345
+        "#,
+        );
+        test_case(&mut help, vec![]);
+    }
+}

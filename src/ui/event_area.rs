@@ -60,13 +60,13 @@ impl<B> Drawable<B> for EventArea<B>
 where
     B: Backend + Send,
 {
-    fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
+    fn draw(&mut self, f: &mut Frame<'_, B>, area: Rect) {
         let block = Block::default()
             .borders(Borders::ALL)
             .border_style(if self.is_selected {
-                Style::default().fg(constant::SELECTED_COLOR.clone())
+                Style::default().fg(*constant::SELECTED_COLOR)
             } else {
-                Style::default().fg(constant::DESELECTED_COLOR.clone())
+                Style::default().fg(*constant::DESELECTED_COLOR)
             })
             .title(self.log_group_name.as_ref());
 
@@ -88,7 +88,7 @@ mod tests {
 
     fn test_case(event_area: &mut EventArea<TestBackend>, color: Color, lines: Vec<&str>) {
         let mut terminal = get_test_terminal(20, 10);
-        let lines = if lines.len() > 0 {
+        let lines = if !lines.is_empty() {
             lines
         } else {
             vec![
@@ -110,10 +110,8 @@ mod tests {
                 let ch = expected.get_mut(x, y);
                 if y == 0 || y == 9 {
                     ch.set_fg(color);
-                } else {
-                    if ch.symbol == "│" {
-                        ch.set_fg(color);
-                    }
+                } else if ch.symbol == "│" {
+                    ch.set_fg(color);
                 }
             }
         }

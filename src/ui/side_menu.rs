@@ -66,7 +66,7 @@ impl<B> Drawable<B> for SideMenu<B>
 where
     B: Backend + Send,
 {
-    fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
+    fn draw(&mut self, f: &mut Frame<'_, B>, area: Rect) {
         let mut state = self.state.try_lock();
         let (list_items, mut list_state) = match state.as_mut() {
             Ok(s) => s.get_list_items(),
@@ -75,9 +75,9 @@ where
         let base_block = Block::default()
             .borders(Borders::ALL)
             .border_style(if self.is_selected {
-                Style::default().fg(constant::SELECTED_COLOR.clone())
+                Style::default().fg(*constant::SELECTED_COLOR)
             } else {
-                Style::default().fg(constant::DESELECTED_COLOR.clone())
+                Style::default().fg(*constant::DESELECTED_COLOR)
             })
             .title("Log Groups");
         let list_block = List::new(list_items)
@@ -92,23 +92,24 @@ where
         if self.is_selected {
             let mut state = self.state.try_lock();
             match event.code {
-                KeyCode::Down => match state.as_mut() {
-                    Ok(s) => s.log_groups.next(),
-                    Err(_) => {}
-                },
-                KeyCode::Up => match state.as_mut() {
-                    Ok(s) => s.log_groups.previous(),
-                    Err(_) => {}
-                },
-                KeyCode::Enter => match state.as_mut() {
-                    Ok(s) => {
+                KeyCode::Down => {
+                    if let Ok(s) = state.as_mut() {
+                        s.log_groups.next()
+                    }
+                }
+                KeyCode::Up => {
+                    if let Ok(s) = state.as_mut() {
+                        s.log_groups.next()
+                    }
+                }
+                KeyCode::Enter => {
+                    if let Ok(s) = state.as_mut() {
                         if let Some(idx) = s.log_groups.get_current_idx() {
                             s.select(idx);
                             self.selected_log_groups = s.get_selected_log_group_names();
                         }
                     }
-                    Err(_) => {}
-                },
+                }
                 _ => {}
             }
         }
@@ -126,7 +127,7 @@ mod tests {
 
     fn test_case(side_menu: &mut SideMenu<TestBackend>, color: Color, lines: Vec<&str>) {
         let mut terminal = get_test_terminal(20, 10);
-        let lines = if lines.len() > 0 {
+        let lines = if !lines.is_empty() {
             lines
         } else {
             vec![
@@ -148,10 +149,8 @@ mod tests {
                 let ch = expected.get_mut(x, y);
                 if y == 0 || y == 9 {
                     ch.set_fg(color);
-                } else {
-                    if ch.symbol == "│" {
-                        ch.set_fg(color);
-                    }
+                } else if ch.symbol == "│" {
+                    ch.set_fg(color);
                 }
             }
         }

@@ -18,7 +18,7 @@ impl LogGroupsState {
         }
     }
 
-    pub fn get_list_items(&self) -> (Vec<ListItem>, ListState) {
+    pub fn get_list_items(&self) -> (Vec<ListItem<'_>>, ListState) {
         let items = self
             .log_groups
             .get_all_names()
@@ -26,12 +26,12 @@ impl LogGroupsState {
             .enumerate()
             .map(|(i, v)| {
                 if self.selection.contains(&i) {
-                    ListItem::new(format!("[X]{}", v).to_owned())
+                    ListItem::new(format!("[X]{}", v))
                 } else {
-                    ListItem::new(format!("[ ]{}", v).to_owned())
+                    ListItem::new(format!("[ ]{}", v))
                 }
             })
-            .collect::<Vec<ListItem>>();
+            .collect::<Vec<ListItem<'_>>>();
         (items, self.log_groups.get_state())
     }
 
@@ -39,23 +39,27 @@ impl LogGroupsState {
         if self.selection.contains(&idx) {
             let index = self.selection.iter().position(|v| *v == idx).unwrap();
             self.selection.remove(index);
-        } else {
-            if self.selection.len() < MAX_LOG_GROUP_SELECTION.clone() {
-                self.selection.push(idx);
-            }
+        } else if self.selection.len() < *MAX_LOG_GROUP_SELECTION {
+            self.selection.push(idx);
         }
     }
 
     pub fn get_selected_log_group_names(&self) -> Vec<String> {
         let mut result = vec![];
         self.selection.iter().for_each(|item| {
-            if let Some(i) = self.log_groups.get_item(item.clone()) {
+            if let Some(i) = self.log_groups.get_item(*item) {
                 if let Some(name) = &i.log_group_name {
                     result.push(name.to_owned());
                 }
             }
         });
         result
+    }
+}
+
+impl Default for LogGroupsState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

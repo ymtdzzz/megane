@@ -53,7 +53,7 @@ impl<B> Drawable<B> for StatusBar<B>
 where
     B: Backend + Send,
 {
-    fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
+    fn draw(&mut self, f: &mut Frame<'_, B>, area: Rect) {
         let state = self.state.try_lock();
         let message = match state.as_ref() {
             Ok(s) => s.message.as_str(),
@@ -82,7 +82,7 @@ mod tests {
 
     fn test_case(status_bar: &mut StatusBar<TestBackend>, lines: Vec<&str>) {
         let mut terminal = get_test_terminal(20, 4);
-        let lines = if lines.len() > 0 {
+        let lines = if !lines.is_empty() {
             lines
         } else {
             vec![

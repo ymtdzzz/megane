@@ -11,7 +11,7 @@ use crate::ui::{
 };
 
 /// which component selected
-enum SelectState {
+pub enum SelectState {
     SideMenu,
     EventAreas(usize),
 }
@@ -129,7 +129,7 @@ impl<B> Drawable<B> for App<B>
 where
     B: Backend + Send,
 {
-    fn draw(&mut self, f: &mut Frame<B>, _area: Rect) {
+    fn draw(&mut self, f: &mut Frame<'_, B>, _area: Rect) {
         let (left, right) = if self.fold { (3, 97) } else { (30, 70) };
         // base_chunks[0] - side menu and event area
         // base_chunks[1] - status bar area
@@ -151,13 +151,7 @@ where
         for (i, v) in self.event_areas.iter_mut().enumerate() {
             v.set_select(match self.select_state {
                 SelectState::SideMenu => false,
-                SelectState::EventAreas(idx) => {
-                    if i == idx {
-                        true
-                    } else {
-                        false
-                    }
-                }
+                SelectState::EventAreas(idx) => i == idx,
             })
         }
         if self.show_help {
@@ -255,7 +249,7 @@ mod tests {
         side_menu_length: u16,
     ) {
         let mut terminal = get_test_terminal(100, 10);
-        let lines = if lines.len() > 0 {
+        let lines = if !lines.is_empty() {
             lines
         } else {
             vec![
@@ -284,13 +278,11 @@ mod tests {
                         ch.set_fg(side_menu_color);
                     }
                 } else if y == 8 {
-                } else {
-                    if ch.symbol != " " {
-                        if x >= side_menu_length {
-                            ch.set_fg(event_area_color);
-                        } else {
-                            ch.set_fg(side_menu_color);
-                        }
+                } else if ch.symbol != " " {
+                    if x >= side_menu_length {
+                        ch.set_fg(event_area_color);
+                    } else {
+                        ch.set_fg(side_menu_color);
                     }
                 }
             }

@@ -1,3 +1,5 @@
+#![warn(rust_2018_idioms)]
+
 #[cfg(test)]
 pub mod test_helper;
 

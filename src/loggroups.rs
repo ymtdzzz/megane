@@ -34,14 +34,16 @@ impl LogGroups {
     }
 
     pub fn push_items(&mut self, mut items: &mut Vec<LogGroup>, has_next_token: bool) {
-        if self.items.len() > 0 {
+        if !self.items.is_empty() {
             self.items.remove(self.items.len() - 1);
         }
         self.items.append(&mut items);
         if has_next_token {
-            let mut more = LogGroup::default();
-            more.arn = Some(MORE_LOG_GROUP_ARN.clone());
-            more.log_group_name = Some(String::from(MORE_LOG_GROUP_NAME.clone()));
+            let more = LogGroup {
+                arn: Some(MORE_LOG_GROUP_ARN.clone()),
+                log_group_name: Some(MORE_LOG_GROUP_NAME.clone()),
+                ..Default::default()
+            };
             self.items.push(more);
         }
     }
@@ -88,14 +90,14 @@ impl LogGroups {
     pub fn next(&mut self) {
         match self.state.selected() {
             Some(s) => {
-                if self.items.len() > 0 {
+                if !self.items.is_empty() {
                     self.state.select(Some(s.saturating_add(1)));
                 } else {
                     self.state.select(None);
                 }
             }
             None => {
-                if self.items.len() > 0 {
+                if !self.items.is_empty() {
                     self.state.select(Some(0));
                 } else {
                     self.state.select(None);

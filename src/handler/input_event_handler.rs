@@ -48,10 +48,8 @@ impl EventHandler for InputEventHandler {
                 // TODO: send Tick(s) for tail mode log areas?
                 last_tick = Instant::now();
             }
-            if self.is_debug {
-                if start_time.elapsed() > end_for {
-                    break;
-                }
+            if self.is_debug && start_time.elapsed() > end_for {
+                break;
             }
         }
         Ok(())

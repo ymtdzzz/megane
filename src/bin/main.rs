@@ -67,6 +67,7 @@ async fn main() -> Result<()> {
         vec![],
         StatusBar::new(status_bar_state),
         false,
+        false,
     )
     .await;
 

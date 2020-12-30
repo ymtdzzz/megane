@@ -9,4 +9,15 @@ lazy_static! {
     pub static ref SELECTED_COLOR: Color = Color::Yellow;
     pub static ref MAX_LOG_GROUP_SELECTION: usize = 4;
     pub static ref HELP_INSTRUCTION: String = String::from("'?' to help");
+    pub static ref HELP_MESSAGE: String = String::from(
+        r#"
+<Navigation>
+  [TAB]   - Toggle folding side menu
+  [Arrow] - Move focus 
+
+<Side Menu>
+
+<Log Event>
+    "#
+    );
 }

@@ -47,7 +47,7 @@ where
             select_state: SelectState::SideMenu,
             show_help,
             fold,
-            help: Help::default(),
+            help: Help::new(),
         }
     }
 
@@ -382,6 +382,21 @@ mod tests {
             "                                                                                                    ",
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30);
+        // help dialog
+        app.toggle_show_help();
+        let lines = vec![
+            "┌HELP──────────────────────────────────────────────────────────────────────────────────────────────┐",
+            "│                                                                                                  │",
+            "│                                                                                                  │",
+            "│                                                                                                  │",
+            "│                                                                                                  │",
+            "│                                                                                                  │",
+            "│                                                                                                  │",
+            "│                                                                                                  │",
+            "│                                                                                                  │",
+            "└──────────────────────────────────────────────────────────────────────────────────────────────────┘",
+        ];
+        test_case(&mut app, Color::Reset, Color::Reset, lines, 30);
     }
 
     #[tokio::test]
@@ -405,6 +420,11 @@ mod tests {
             app.handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
                 .await
         );
+        assert!(
+            app.handle_event(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE))
+                .await
+        );
+        assert!(app.show_help);
     }
 
     #[tokio::test]

@@ -72,14 +72,14 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let mut state = LogGroupsState::new();
+        let mut state = LogGroupsState::default();
         state.is_fetching = true;
         assert!(state.is_fetching);
     }
 
     #[test]
     fn test_get_list_items() {
-        let mut state = LogGroupsState::new();
+        let mut state = LogGroupsState::default();
         state.log_groups = LogGroups::new(make_log_groups(0, 3));
         state.selection = vec![0, 2];
         let exp_item = vec![
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_select() {
-        let mut state = LogGroupsState::new();
+        let mut state = LogGroupsState::default();
         state.selection = vec![0, 2];
         state.select(0);
         state.select(0);
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_get_selected_log_group_names() {
-        let mut state = LogGroupsState::new();
+        let mut state = LogGroupsState::default();
         state.log_groups = LogGroups::new(make_log_groups(0, 5));
         state.selection = vec![0, 2, 4];
         let result = state.get_selected_log_group_names();

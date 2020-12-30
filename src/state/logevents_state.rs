@@ -37,17 +37,17 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let mut state = LogEventsState::new();
+        let mut state = LogEventsState::default();
         state.is_fetching = true;
         assert!(state.is_fetching);
     }
 
     #[test]
     fn test_reset() {
-        let mut state = LogEventsState::new();
+        let mut state = LogEventsState::default();
         let mut events = vec![FilteredLogEvent::default()];
         state.events.push_items(&mut events, None);
-        let expected = LogEventsState::new();
+        let expected = LogEventsState::default();
         assert!(!state.events.is_same(&expected.events));
         state.reset();
         assert!(state.events.is_same(&expected.events));

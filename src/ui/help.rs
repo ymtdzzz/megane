@@ -48,7 +48,7 @@ impl<B> Drawable<B> for Help<B>
 where
     B: Backend + Send,
 {
-    fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
+    fn draw(&mut self, f: &mut Frame<'_, B>, area: Rect) {
         let block = Block::default()
             .title("HELP".to_string())
             .borders(Borders::ALL);
@@ -65,7 +65,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crossterm::event::{KeyCode, KeyModifiers};
+    
     use tui::{backend::TestBackend, buffer::Buffer};
 
     use super::*;
@@ -73,7 +73,7 @@ mod tests {
 
     fn test_case(help: &mut Help<TestBackend>, lines: Vec<&str>) {
         let mut terminal = get_test_terminal(20, 10);
-        let lines = if lines.len() > 0 {
+        let lines = if !lines.is_empty() {
             lines
         } else {
             vec![
@@ -89,7 +89,7 @@ mod tests {
                 "└──────────────────┘",
             ]
         };
-        let mut expected = Buffer::with_lines(lines);
+        let expected = Buffer::with_lines(lines);
         terminal
             .draw(|f| {
                 help.draw(f, f.size());

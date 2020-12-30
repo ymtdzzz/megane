@@ -36,7 +36,7 @@ async fn test_run() {
                 .log_group_name
         );
         assert_eq!(
-            Some(format!("{}", (i + 1).to_string())),
+            Some((i + 1).to_string()),
             state.lock().unwrap().log_groups.get_item(i).unwrap().arn,
         );
     }

@@ -9,11 +9,11 @@ use tui::{
     backend::Backend,
     layout::Rect,
     style::{Modifier, Style},
-    widgets::{Block, Borders, List, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState},
     Frame,
 };
 
-use crate::{constant, state::loggroups_state::LogGroupsState, ui::Drawable};
+use crate::{constant, loader::Loader, state::loggroups_state::LogGroupsState, ui::Drawable};
 
 pub struct SideMenu<B>
 where
@@ -22,6 +22,7 @@ where
     state: Arc<Mutex<LogGroupsState>>,
     is_selected: bool,
     selected_log_groups: Vec<String>,
+    loader: Loader,
     _phantom: PhantomData<B>,
 }
 
@@ -34,6 +35,7 @@ where
             state,
             is_selected: true,
             selected_log_groups: vec![],
+            loader: Loader::new(constant::LOADER.clone()),
             _phantom: PhantomData,
         }
     }
@@ -56,6 +58,7 @@ where
             state: Arc::new(Mutex::new(LogGroupsState::new())),
             is_selected: false,
             selected_log_groups: vec![],
+            loader: Loader::new(constant::LOADER.clone()),
             _phantom: PhantomData,
         }
     }
@@ -69,7 +72,16 @@ where
     fn draw(&mut self, f: &mut Frame<'_, B>, area: Rect) {
         let mut state = self.state.try_lock();
         let (list_items, mut list_state) = match state.as_mut() {
-            Ok(s) => s.get_list_items(),
+            Ok(s) => {
+                let (mut items, state) = s.get_list_items();
+                if s.is_fetching {
+                    items.push(ListItem::new(format!(
+                        "Fetching {}",
+                        self.loader.get_char().to_string()
+                    )));
+                }
+                (items, state)
+            }
             Err(_) => (vec![], ListState::default()),
         };
         let base_block = Block::default()
@@ -99,7 +111,7 @@ where
                 }
                 KeyCode::Up => {
                     if let Ok(s) = state.as_mut() {
-                        s.log_groups.next()
+                        s.log_groups.previous()
                     }
                 }
                 KeyCode::Enter => {

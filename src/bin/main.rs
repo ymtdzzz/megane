@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
     let (input_tx, input_rx) = tokio::sync::mpsc::channel(1);
     tokio::spawn(async move {
         let mut input_event_handler =
-            InputEventHandler::new(Duration::from_millis(1000), input_tx, false);
+            InputEventHandler::new(Duration::from_millis(100), input_tx, false);
         let _ = input_event_handler.run().await;
     });
 

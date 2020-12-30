@@ -1,16 +1,16 @@
 use std::{
     iter::{Cycle, Iterator},
-    str::Chars,
+    vec::IntoIter,
 };
 
-pub struct Loader<'a> {
-    loader: Cycle<Chars<'a>>,
+pub struct Loader {
+    loader: Cycle<IntoIter<char>>,
 }
 
-impl<'a> Loader<'a> {
-    pub fn new(chars: Chars<'a>) -> Self {
+impl Loader {
+    pub fn new(s: String) -> Self {
         Loader {
-            loader: chars.cycle(),
+            loader: s.chars().collect::<Vec<_>>().into_iter().cycle(),
         }
     }
 
@@ -25,7 +25,7 @@ mod tests {
 
     #[test]
     fn test_get_char() {
-        let mut loader = Loader::new("01234".chars());
+        let mut loader = Loader::new("01234".to_string());
         assert_eq!('0', loader.get_char());
         assert_eq!('1', loader.get_char());
         assert_eq!('2', loader.get_char());

@@ -23,7 +23,7 @@ impl LogGroupsState {
         }
     }
 
-    fn query_log_groups(&mut self, query: &str, exc: &Vec<String>) {
+    fn query_log_groups(&mut self, query: &str, exc: &[String]) {
         self.filtered_log_groups.set_items(
             self.log_groups
                 .items()
@@ -44,7 +44,7 @@ impl LogGroupsState {
     pub fn get_list_items(
         &mut self,
         query: &str,
-        exc: &Vec<String>,
+        exc: &[String],
     ) -> (Vec<ListItem<'_>>, ListState) {
         let selected_gnames = self.get_selected_log_group_names();
         self.query_log_groups(query, exc);
@@ -71,7 +71,7 @@ impl LogGroupsState {
         (items, self.state.clone())
     }
 
-    pub fn update_selections(&mut self, gnames: &Vec<String>) {
+    pub fn update_selections(&mut self, gnames: &[String]) {
         self.selection = vec![];
         self.filtered_log_groups
             .items()

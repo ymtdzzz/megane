@@ -1,3 +1,4 @@
+use rusoto_logs::LogGroup;
 use tui::widgets::{ListItem, ListState};
 
 use crate::{constant::MAX_LOG_GROUP_SELECTION, loggroups::*};
@@ -5,6 +6,7 @@ use crate::{constant::MAX_LOG_GROUP_SELECTION, loggroups::*};
 /// This struct is for managing log groups state.
 pub struct LogGroupsState {
     pub log_groups: LogGroups,
+    filtered_log_groups: LogGroups,
     pub is_fetching: bool,
     pub selection: Vec<usize>,
 }
@@ -13,14 +15,38 @@ impl LogGroupsState {
     pub fn new() -> Self {
         LogGroupsState {
             log_groups: LogGroups::new(vec![]),
+            filtered_log_groups: LogGroups::new(vec![]),
             is_fetching: false,
             selection: vec![],
         }
     }
 
-    pub fn get_list_items(&self) -> (Vec<ListItem<'_>>, ListState) {
+    fn query_log_groups(&mut self, query: &str, exc: &Vec<String>) {
+        self.filtered_log_groups.set_items(
+            self.log_groups
+                .items()
+                .into_iter()
+                .filter(|v| {
+                    if let Some(gname) = &v.log_group_name {
+                        query.is_empty()
+                            || gname.contains(query)
+                            || exc.contains(&gname.to_string())
+                    } else {
+                        false
+                    }
+                })
+                .collect::<Vec<LogGroup>>(),
+        );
+    }
+
+    pub fn get_list_items(
+        &mut self,
+        query: &str,
+        exc: &Vec<String>,
+    ) -> (Vec<ListItem<'_>>, ListState) {
+        self.query_log_groups(query, exc);
         let items = self
-            .log_groups
+            .filtered_log_groups
             .get_all_names()
             .iter()
             .enumerate()
@@ -32,7 +58,16 @@ impl LogGroupsState {
                 }
             })
             .collect::<Vec<ListItem<'_>>>();
-        (items, self.log_groups.get_state())
+        let mut state = self.log_groups.get_state();
+        if let Some(idx) = state.selected() {
+            if idx >= items.len() {
+                let current_idx = items.len().saturating_sub(1);
+                state.select(Some(current_idx));
+                self.log_groups.state_select(current_idx);
+            }
+        }
+
+        (items, state)
     }
 
     pub fn select(&mut self, idx: usize) {
@@ -89,7 +124,18 @@ mod tests {
             ListItem::new("[ ]log_group_3"),
         ];
         let exp_state = ListState::default();
-        let (res_item, res_state) = state.get_list_items();
+        let (res_item, res_state) = state.get_list_items("", &vec![]);
+        assert_eq!(exp_item, res_item);
+        assert_eq!(exp_state.selected(), res_state.selected());
+        let exp_item = vec![ListItem::new("[X]log_group_0")];
+        let (res_item, res_state) = state.get_list_items("0", &vec![]);
+        assert_eq!(exp_item, res_item);
+        assert_eq!(exp_state.selected(), res_state.selected());
+        let exp_item = vec![
+            ListItem::new("[X]log_group_0"),
+            ListItem::new("[ ]log_group_1"),
+        ];
+        let (res_item, res_state) = state.get_list_items("0", &vec!["log_group_1".to_string()]);
         assert_eq!(exp_item, res_item);
         assert_eq!(exp_state.selected(), res_state.selected());
     }

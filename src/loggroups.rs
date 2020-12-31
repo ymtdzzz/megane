@@ -25,6 +25,10 @@ impl LogGroups {
         self.items.get(idx)
     }
 
+    pub fn items(&self) -> Vec<LogGroup> {
+        self.items.clone()
+    }
+
     pub fn get_log_group_name(&self, idx: usize) -> Option<String> {
         if idx < self.items.len() {
             self.items[idx].log_group_name.clone()
@@ -81,6 +85,10 @@ impl LogGroups {
 
     pub fn get_state(&self) -> ListState {
         self.state.clone()
+    }
+
+    pub fn state_select(&mut self, idx: usize) {
+        self.state.select(Some(idx));
     }
 
     pub fn get_current_idx(&self) -> Option<usize> {

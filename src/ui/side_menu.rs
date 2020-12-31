@@ -23,6 +23,7 @@ where
     is_selected: bool,
     selected_log_groups: Vec<String>,
     loader: Loader,
+    query: String,
     _phantom: PhantomData<B>,
 }
 
@@ -36,6 +37,7 @@ where
             is_selected: true,
             selected_log_groups: vec![],
             loader: Loader::new(constant::LOADER.clone()),
+            query: String::from(""),
             _phantom: PhantomData,
         }
     }
@@ -59,6 +61,7 @@ where
             is_selected: false,
             selected_log_groups: vec![],
             loader: Loader::new(constant::LOADER.clone()),
+            query: String::from(""),
             _phantom: PhantomData,
         }
     }
@@ -73,8 +76,9 @@ where
         let mut state = self.state.try_lock();
         let (list_items, mut list_state) = match state.as_mut() {
             Ok(s) => {
-                let (mut items, state) = s.get_list_items();
-                if s.is_fetching {
+                let is_fetching = s.is_fetching;
+                let (mut items, state) = s.get_list_items(&self.query, &self.selected_log_groups);
+                if is_fetching {
                     items.push(ListItem::new(format!(
                         "Fetching {}",
                         self.loader.get_char().to_string()
@@ -91,7 +95,14 @@ where
             } else {
                 Style::default().fg(*constant::DESELECTED_COLOR)
             })
-            .title("Log Groups");
+            .title(format!(
+                "Log Groups [{}]",
+                if self.query.is_empty() {
+                    "type to search"
+                } else {
+                    &self.query
+                }
+            ));
         let list_block = List::new(list_items)
             .block(base_block)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
@@ -104,6 +115,15 @@ where
         if self.is_selected {
             let mut state = self.state.try_lock();
             match event.code {
+                KeyCode::Char(c) => {
+                    if c != '?' {
+                        // ? is the key to toggle help dialog
+                        self.query.push(c);
+                    }
+                }
+                KeyCode::Backspace => {
+                    self.query.pop();
+                }
                 KeyCode::Down => {
                     if let Ok(s) = state.as_mut() {
                         s.log_groups.next()
@@ -143,7 +163,7 @@ mod tests {
             lines
         } else {
             vec![
-                "┌Log Groups────────┐",
+                "┌Log Groups [type t┐",
                 "│                  │",
                 "│                  │",
                 "│                  │",

@@ -253,7 +253,7 @@ mod tests {
             lines
         } else {
             vec![
-                "┌Log Groups──────────────────┐                                                                      ",
+                "┌Log Groups [type to search]─┐                                                                      ",
                 "│                            │                                                                      ",
                 "│                            │                                                                      ",
                 "│                            │                                                                      ",
@@ -339,7 +339,7 @@ mod tests {
         test_case(&mut app, Color::Yellow, Color::White, vec![], 30);
         app.event_areas.push(EventArea::default());
         let lines = vec![
-            "┌Log Groups──────────────────┐┌Events──────────────────────────────────────────────────────────────┐",
+            "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -370,7 +370,7 @@ mod tests {
         app.toggle_side_fold();
         app.select_state = SelectState::EventAreas(0);
         let lines = vec![
-            "┌Log Groups──────────────────┐┌Events──────────────────────────────────────────────────────────────┐",
+            "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",

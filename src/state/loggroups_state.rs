@@ -1,3 +1,4 @@
+use rusoto_logs::LogGroup;
 use tui::widgets::{ListItem, ListState};
 
 use crate::{constant::MAX_LOG_GROUP_SELECTION, loggroups::*};
@@ -5,22 +6,51 @@ use crate::{constant::MAX_LOG_GROUP_SELECTION, loggroups::*};
 /// This struct is for managing log groups state.
 pub struct LogGroupsState {
     pub log_groups: LogGroups,
+    filtered_log_groups: LogGroups,
     pub is_fetching: bool,
     pub selection: Vec<usize>,
+    pub state: ListState,
 }
 
 impl LogGroupsState {
     pub fn new() -> Self {
         LogGroupsState {
             log_groups: LogGroups::new(vec![]),
+            filtered_log_groups: LogGroups::new(vec![]),
             is_fetching: false,
             selection: vec![],
+            state: ListState::default(),
         }
     }
 
-    pub fn get_list_items(&self) -> (Vec<ListItem<'_>>, ListState) {
+    fn query_log_groups(&mut self, query: &str, exc: &[String]) {
+        self.filtered_log_groups.set_items(
+            self.log_groups
+                .items()
+                .into_iter()
+                .filter(|v| {
+                    if let Some(gname) = &v.log_group_name {
+                        query.is_empty()
+                            || gname.contains(query)
+                            || exc.contains(&gname.to_string())
+                    } else {
+                        false
+                    }
+                })
+                .collect::<Vec<LogGroup>>(),
+        );
+    }
+
+    pub fn get_list_items(
+        &mut self,
+        query: &str,
+        exc: &[String],
+    ) -> (Vec<ListItem<'_>>, ListState) {
+        let selected_gnames = self.get_selected_log_group_names();
+        self.query_log_groups(query, exc);
+        self.update_selections(&selected_gnames);
         let items = self
-            .log_groups
+            .filtered_log_groups
             .get_all_names()
             .iter()
             .enumerate()
@@ -32,7 +62,28 @@ impl LogGroupsState {
                 }
             })
             .collect::<Vec<ListItem<'_>>>();
-        (items, self.log_groups.get_state())
+        if let Some(idx) = self.state.selected() {
+            if idx >= items.len() {
+                self.state.select(Some(items.len().saturating_sub(1)));
+            }
+        }
+
+        (items, self.state.clone())
+    }
+
+    pub fn update_selections(&mut self, gnames: &[String]) {
+        self.selection = vec![];
+        self.filtered_log_groups
+            .items()
+            .iter()
+            .enumerate()
+            .for_each(|(i, v)| {
+                if let Some(n) = &v.log_group_name {
+                    if gnames.contains(&n) {
+                        self.selection.push(i);
+                    }
+                }
+            });
     }
 
     pub fn select(&mut self, idx: usize) {
@@ -47,13 +98,51 @@ impl LogGroupsState {
     pub fn get_selected_log_group_names(&self) -> Vec<String> {
         let mut result = vec![];
         self.selection.iter().for_each(|item| {
-            if let Some(i) = self.log_groups.get_item(*item) {
+            if let Some(i) = self.filtered_log_groups.get_item(*item) {
                 if let Some(name) = &i.log_group_name {
                     result.push(name.to_owned());
                 }
             }
         });
         result
+    }
+
+    pub fn state_select(&mut self, idx: usize) {
+        self.state.select(Some(idx));
+    }
+
+    pub fn get_current_idx(&self) -> Option<usize> {
+        self.state.selected()
+    }
+
+    pub fn next(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                if self.filtered_log_groups.has_items() {
+                    self.state.select(Some(s.saturating_add(1)));
+                } else {
+                    self.state.select(None);
+                }
+            }
+            None => {
+                if self.filtered_log_groups.has_items() {
+                    self.state.select(Some(0));
+                } else {
+                    self.state.select(None);
+                }
+            }
+        }
+    }
+
+    pub fn previous(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                self.state.select(Some(s.saturating_sub(1)));
+            }
+            None => {
+                self.state.select(None);
+            }
+        };
     }
 }
 
@@ -81,6 +170,7 @@ mod tests {
     fn test_get_list_items() {
         let mut state = LogGroupsState::default();
         state.log_groups = LogGroups::new(make_log_groups(0, 3));
+        state.filtered_log_groups = LogGroups::new(make_log_groups(0, 3));
         state.selection = vec![0, 2];
         let exp_item = vec![
             ListItem::new("[X]log_group_0"),
@@ -89,9 +179,23 @@ mod tests {
             ListItem::new("[ ]log_group_3"),
         ];
         let exp_state = ListState::default();
-        let (res_item, res_state) = state.get_list_items();
+        let (res_item, res_state) = state.get_list_items("", &vec![]);
         assert_eq!(exp_item, res_item);
         assert_eq!(exp_state.selected(), res_state.selected());
+        let exp_item = vec![ListItem::new("[X]log_group_0")];
+        let (res_item, res_state) = state.get_list_items("0", &vec![]);
+        assert_eq!(exp_item, res_item);
+        assert_eq!(exp_state.selected(), res_state.selected());
+        let exp_item = vec![
+            ListItem::new("[X]log_group_0"),
+            ListItem::new("[ ]log_group_1"),
+        ];
+        let (res_item, res_state) = state.get_list_items("0", &vec!["log_group_1".to_string()]);
+        assert_eq!(exp_item, res_item);
+        assert_eq!(exp_state.selected(), res_state.selected());
+        state.state_select(10);
+        let _ = state.get_list_items("", &vec![]);
+        assert_eq!(Some(3), state.state.selected());
     }
 
     #[test]
@@ -114,6 +218,7 @@ mod tests {
     fn test_get_selected_log_group_names() {
         let mut state = LogGroupsState::default();
         state.log_groups = LogGroups::new(make_log_groups(0, 5));
+        state.filtered_log_groups = LogGroups::new(make_log_groups(0, 5));
         state.selection = vec![0, 2, 4];
         let result = state.get_selected_log_group_names();
         let mut expect = make_log_groups(0, 4);
@@ -124,5 +229,57 @@ mod tests {
             .map(|v| v.log_group_name.as_ref().unwrap().to_string())
             .collect::<Vec<String>>();
         assert_eq!(expect, result);
+    }
+
+    #[test]
+    fn test_state_iterate() {
+        let mut state = LogGroupsState {
+            log_groups: LogGroups::new(make_log_groups(0, 2)),
+            filtered_log_groups: LogGroups::new(make_log_groups(0, 2)),
+            state: ListState::default(),
+            ..Default::default()
+        };
+        state.next();
+        state.next();
+        assert_eq!(Some(1), state.state.selected());
+        state.previous();
+        assert_eq!(Some(0), state.state.selected());
+        let mut state = LogGroupsState {
+            log_groups: LogGroups::new(make_log_groups(0, 2)),
+            filtered_log_groups: LogGroups::new(make_log_groups(0, 2)),
+            state: ListState::default(),
+            ..Default::default()
+        };
+        state.next();
+        state.log_groups = LogGroups::new(vec![]);
+        state.filtered_log_groups = LogGroups::new(vec![]);
+        state.next();
+        assert_eq!(None, state.state.selected());
+        state.previous();
+        assert_eq!(None, state.state.selected());
+        state.next();
+        assert_eq!(None, state.state.selected());
+        state.state_select(1);
+        assert_eq!(Some(1), state.state.selected());
+    }
+
+    #[test]
+    fn test_query_log_grups() {
+        let mut state = LogGroupsState {
+            log_groups: LogGroups::new(vec![]),
+            filtered_log_groups: LogGroups::new(vec![]),
+            state: ListState::default(),
+            ..Default::default()
+        };
+        let mut log_groups = make_log_groups(0, 2);
+        log_groups[0] = LogGroup {
+            log_group_name: None,
+            ..Default::default()
+        };
+        state.log_groups = LogGroups::new(log_groups.clone());
+        state.filtered_log_groups = LogGroups::new(log_groups.clone());
+        let expect = LogGroups::new(make_log_groups(1, 2)).items();
+        state.query_log_groups("", &vec![]);
+        assert_eq!(expect, state.filtered_log_groups.items());
     }
 }

@@ -200,6 +200,20 @@ mod tests {
         test_case(&mut side_menu, Color::White, vec![]);
         side_menu.set_select(true);
         test_case(&mut side_menu, Color::Yellow, vec![]);
+        side_menu.state.lock().unwrap().is_fetching = true;
+        let lines = vec![
+            "┌Log Groups [type t┐",
+            "│Fetching ⣾        │",
+            "│                  │",
+            "│                  │",
+            "│                  │",
+            "│                  │",
+            "│                  │",
+            "│                  │",
+            "│                  │",
+            "└──────────────────┘",
+        ];
+        test_case(&mut side_menu, Color::Yellow, lines);
     }
 
     #[tokio::test]
@@ -210,7 +224,6 @@ mod tests {
         state.lock().unwrap().log_groups = LogGroups::new(get_log_groups(0, 3, false));
         state.lock().unwrap().next();
         side_menu.state = Arc::clone(&state);
-
         assert!(
             !side_menu
                 .handle_event(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE))
@@ -221,10 +234,28 @@ mod tests {
                 .handle_event(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
                 .await
         );
+        side_menu.state.lock().unwrap().state.select(Some(1));
         assert!(
             !side_menu
                 .handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
                 .await
         );
+        assert!(
+            !side_menu
+                .handle_event(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE))
+                .await
+        );
+        assert!(
+            !side_menu
+                .handle_event(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(String::from("ab"), side_menu.query);
+        assert!(
+            !side_menu
+                .handle_event(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(String::from("a"), side_menu.query);
     }
 }

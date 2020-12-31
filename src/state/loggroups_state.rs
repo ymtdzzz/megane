@@ -193,6 +193,9 @@ mod tests {
         let (res_item, res_state) = state.get_list_items("0", &vec!["log_group_1".to_string()]);
         assert_eq!(exp_item, res_item);
         assert_eq!(exp_state.selected(), res_state.selected());
+        state.state_select(10);
+        let _ = state.get_list_items("", &vec![]);
+        assert_eq!(Some(3), state.state.selected());
     }
 
     #[test]
@@ -256,5 +259,27 @@ mod tests {
         assert_eq!(None, state.state.selected());
         state.next();
         assert_eq!(None, state.state.selected());
+        state.state_select(1);
+        assert_eq!(Some(1), state.state.selected());
+    }
+
+    #[test]
+    fn test_query_log_grups() {
+        let mut state = LogGroupsState {
+            log_groups: LogGroups::new(vec![]),
+            filtered_log_groups: LogGroups::new(vec![]),
+            state: ListState::default(),
+            ..Default::default()
+        };
+        let mut log_groups = make_log_groups(0, 2);
+        log_groups[0] = LogGroup {
+            log_group_name: None,
+            ..Default::default()
+        };
+        state.log_groups = LogGroups::new(log_groups.clone());
+        state.filtered_log_groups = LogGroups::new(log_groups.clone());
+        let expect = LogGroups::new(make_log_groups(1, 2)).items();
+        state.query_log_groups("", &vec![]);
+        assert_eq!(expect, state.filtered_log_groups.items());
     }
 }

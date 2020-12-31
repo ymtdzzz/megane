@@ -1,13 +1,15 @@
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
+use std::sync::{Arc, Mutex};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     Frame,
 };
 
-use crate::ui::{
-    event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable,
+use crate::{
+    state::logevents_state::LogEventsState,
+    ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
 };
 
 /// which component selected
@@ -22,6 +24,7 @@ where
 {
     side_menu: SideMenu<B>,
     event_areas: Vec<EventArea<B>>,
+    logevent_states: [Arc<Mutex<LogEventsState>>; 4],
     status_bar: StatusBar<B>,
     select_state: SelectState,
     show_help: bool,
@@ -36,6 +39,7 @@ where
     pub async fn new(
         side_menu: SideMenu<B>,
         event_areas: Vec<EventArea<B>>,
+        logevent_states: [Arc<Mutex<LogEventsState>>; 4],
         status_bar: StatusBar<B>,
         show_help: bool,
         fold: bool,
@@ -43,6 +47,7 @@ where
         App {
             side_menu,
             event_areas,
+            logevent_states,
             status_bar,
             select_state: SelectState::SideMenu,
             show_help,
@@ -115,6 +120,12 @@ where
         App {
             side_menu: SideMenu::default(),
             event_areas: vec![],
+            logevent_states: [
+                Arc::new(Mutex::new(LogEventsState::default())),
+                Arc::new(Mutex::new(LogEventsState::default())),
+                Arc::new(Mutex::new(LogEventsState::default())),
+                Arc::new(Mutex::new(LogEventsState::default())),
+            ],
             status_bar: StatusBar::default(),
             select_state: SelectState::SideMenu,
             show_help: false,
@@ -222,7 +233,9 @@ where
                             }
                         }
                         for i in log_groups_to_create {
-                            self.event_areas.push(EventArea::new(i.to_string()));
+                            let idx = self.event_areas.len().saturating_sub(1);
+                            let state = Arc::clone(&self.logevent_states[idx]);
+                            self.event_areas.push(EventArea::new(i.to_string(), state));
                         }
                     }
                 }

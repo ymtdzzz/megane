@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use crossterm::event::KeyEvent;
@@ -10,13 +13,14 @@ use tui::{
     Frame,
 };
 
-use crate::{constant, ui::Drawable};
+use crate::{constant, state::logevents_state::LogEventsState, ui::Drawable};
 
 pub struct EventArea<B>
 where
     B: Backend,
 {
     log_group_name: String,
+    state: Arc<Mutex<LogEventsState>>,
     is_selected: bool,
     _phantom: PhantomData<B>,
 }
@@ -25,9 +29,10 @@ impl<B> EventArea<B>
 where
     B: Backend,
 {
-    pub fn new(log_group_name: String) -> Self {
+    pub fn new(log_group_name: String, state: Arc<Mutex<LogEventsState>>) -> Self {
         EventArea {
             log_group_name,
+            state,
             is_selected: false,
             _phantom: PhantomData,
         }
@@ -49,6 +54,7 @@ where
     fn default() -> Self {
         EventArea {
             log_group_name: String::from("Events"),
+            state: Arc::new(Mutex::new(LogEventsState::default())),
             is_selected: false,
             _phantom: PhantomData,
         }

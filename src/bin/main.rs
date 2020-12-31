@@ -22,7 +22,10 @@ use megane::{
         input_event_handler::InputEventHandler, loggroup_event_handler::LogGroupEventHandler,
         main_event_handler::MainEventHandler, EventHandler,
     },
-    state::{loggroups_state::LogGroupsState, status_bar_state::StatusBarState},
+    state::{
+        logevents_state::LogEventsState, loggroups_state::LogGroupsState,
+        status_bar_state::StatusBarState,
+    },
     terminal::*,
     ui::{side_menu::SideMenu, status_bar::StatusBar},
 };
@@ -43,6 +46,12 @@ async fn main() -> Result<()> {
     let log_client = LogClient::new(aws_client);
     let loggroup_state = Arc::new(Mutex::new(LogGroupsState::new()));
     let status_bar_state = Arc::new(Mutex::new(StatusBarState::new(HELP_INSTRUCTION.clone())));
+    let logevent_states = [
+        Arc::new(Mutex::new(LogEventsState::default())),
+        Arc::new(Mutex::new(LogEventsState::default())),
+        Arc::new(Mutex::new(LogEventsState::default())),
+        Arc::new(Mutex::new(LogEventsState::default())),
+    ];
 
     // input event handling
     let (input_tx, input_rx) = tokio::sync::mpsc::channel(1);
@@ -67,6 +76,7 @@ async fn main() -> Result<()> {
     let app: App<CrosstermBackend<Stdout>> = App::new(
         SideMenu::new(Arc::clone(&loggroup_state)),
         vec![],
+        logevent_states,
         StatusBar::new(status_bar_state),
         false,
         false,

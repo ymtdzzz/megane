@@ -126,17 +126,17 @@ where
                 }
                 KeyCode::Down => {
                     if let Ok(s) = state.as_mut() {
-                        s.log_groups.next()
+                        s.next();
                     }
                 }
                 KeyCode::Up => {
                     if let Ok(s) = state.as_mut() {
-                        s.log_groups.previous()
+                        s.previous();
                     }
                 }
                 KeyCode::Enter => {
                     if let Ok(s) = state.as_mut() {
-                        if let Some(idx) = s.log_groups.get_current_idx() {
+                        if let Some(idx) = s.get_current_idx() {
                             s.select(idx);
                             self.selected_log_groups = s.get_selected_log_group_names();
                         }
@@ -208,7 +208,7 @@ mod tests {
         side_menu.is_selected = true;
         let state = Arc::new(Mutex::new(LogGroupsState::new()));
         state.lock().unwrap().log_groups = LogGroups::new(get_log_groups(0, 3, false));
-        state.lock().unwrap().log_groups.next();
+        state.lock().unwrap().next();
         side_menu.state = Arc::clone(&state);
 
         assert!(

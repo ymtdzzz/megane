@@ -9,6 +9,7 @@ pub struct LogGroupsState {
     filtered_log_groups: LogGroups,
     pub is_fetching: bool,
     pub selection: Vec<usize>,
+    pub state: ListState,
 }
 
 impl LogGroupsState {
@@ -18,6 +19,7 @@ impl LogGroupsState {
             filtered_log_groups: LogGroups::new(vec![]),
             is_fetching: false,
             selection: vec![],
+            state: ListState::default(),
         }
     }
 
@@ -44,7 +46,9 @@ impl LogGroupsState {
         query: &str,
         exc: &Vec<String>,
     ) -> (Vec<ListItem<'_>>, ListState) {
+        let selected_gnames = self.get_selected_log_group_names();
         self.query_log_groups(query, exc);
+        self.update_selections(&selected_gnames);
         let items = self
             .filtered_log_groups
             .get_all_names()
@@ -58,16 +62,28 @@ impl LogGroupsState {
                 }
             })
             .collect::<Vec<ListItem<'_>>>();
-        let mut state = self.log_groups.get_state();
-        if let Some(idx) = state.selected() {
+        if let Some(idx) = self.state.selected() {
             if idx >= items.len() {
-                let current_idx = items.len().saturating_sub(1);
-                state.select(Some(current_idx));
-                self.log_groups.state_select(current_idx);
+                self.state.select(Some(items.len().saturating_sub(1)));
             }
         }
 
-        (items, state)
+        (items, self.state.clone())
+    }
+
+    pub fn update_selections(&mut self, gnames: &Vec<String>) {
+        self.selection = vec![];
+        self.filtered_log_groups
+            .items()
+            .iter()
+            .enumerate()
+            .for_each(|(i, v)| {
+                if let Some(n) = &v.log_group_name {
+                    if gnames.contains(&n) {
+                        self.selection.push(i);
+                    }
+                }
+            });
     }
 
     pub fn select(&mut self, idx: usize) {
@@ -82,13 +98,51 @@ impl LogGroupsState {
     pub fn get_selected_log_group_names(&self) -> Vec<String> {
         let mut result = vec![];
         self.selection.iter().for_each(|item| {
-            if let Some(i) = self.log_groups.get_item(*item) {
+            if let Some(i) = self.filtered_log_groups.get_item(*item) {
                 if let Some(name) = &i.log_group_name {
                     result.push(name.to_owned());
                 }
             }
         });
         result
+    }
+
+    pub fn state_select(&mut self, idx: usize) {
+        self.state.select(Some(idx));
+    }
+
+    pub fn get_current_idx(&self) -> Option<usize> {
+        self.state.selected()
+    }
+
+    pub fn next(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                if self.filtered_log_groups.has_items() {
+                    self.state.select(Some(s.saturating_add(1)));
+                } else {
+                    self.state.select(None);
+                }
+            }
+            None => {
+                if self.filtered_log_groups.has_items() {
+                    self.state.select(Some(0));
+                } else {
+                    self.state.select(None);
+                }
+            }
+        }
+    }
+
+    pub fn previous(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                self.state.select(Some(s.saturating_sub(1)));
+            }
+            None => {
+                self.state.select(None);
+            }
+        };
     }
 }
 
@@ -116,6 +170,7 @@ mod tests {
     fn test_get_list_items() {
         let mut state = LogGroupsState::default();
         state.log_groups = LogGroups::new(make_log_groups(0, 3));
+        state.filtered_log_groups = LogGroups::new(make_log_groups(0, 3));
         state.selection = vec![0, 2];
         let exp_item = vec![
             ListItem::new("[X]log_group_0"),
@@ -160,6 +215,7 @@ mod tests {
     fn test_get_selected_log_group_names() {
         let mut state = LogGroupsState::default();
         state.log_groups = LogGroups::new(make_log_groups(0, 5));
+        state.filtered_log_groups = LogGroups::new(make_log_groups(0, 5));
         state.selection = vec![0, 2, 4];
         let result = state.get_selected_log_group_names();
         let mut expect = make_log_groups(0, 4);
@@ -170,5 +226,35 @@ mod tests {
             .map(|v| v.log_group_name.as_ref().unwrap().to_string())
             .collect::<Vec<String>>();
         assert_eq!(expect, result);
+    }
+
+    #[test]
+    fn test_state_iterate() {
+        let mut state = LogGroupsState {
+            log_groups: LogGroups::new(make_log_groups(0, 2)),
+            filtered_log_groups: LogGroups::new(make_log_groups(0, 2)),
+            state: ListState::default(),
+            ..Default::default()
+        };
+        state.next();
+        state.next();
+        assert_eq!(Some(1), state.state.selected());
+        state.previous();
+        assert_eq!(Some(0), state.state.selected());
+        let mut state = LogGroupsState {
+            log_groups: LogGroups::new(make_log_groups(0, 2)),
+            filtered_log_groups: LogGroups::new(make_log_groups(0, 2)),
+            state: ListState::default(),
+            ..Default::default()
+        };
+        state.next();
+        state.log_groups = LogGroups::new(vec![]);
+        state.filtered_log_groups = LogGroups::new(vec![]);
+        state.next();
+        assert_eq!(None, state.state.selected());
+        state.previous();
+        assert_eq!(None, state.state.selected());
+        state.next();
+        assert_eq!(None, state.state.selected());
     }
 }

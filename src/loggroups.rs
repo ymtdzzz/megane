@@ -29,6 +29,10 @@ impl LogGroups {
         self.items.clone()
     }
 
+    pub fn has_items(&self) -> bool {
+        !self.items.is_empty()
+    }
+
     pub fn get_log_group_name(&self, idx: usize) -> Option<String> {
         if idx < self.items.len() {
             self.items[idx].log_group_name.clone()
@@ -81,48 +85,6 @@ impl LogGroups {
             .filter(|i| i.log_group_name.is_some())
             .map(|i| i.log_group_name.as_ref().unwrap().as_str())
             .collect::<Vec<&str>>()
-    }
-
-    pub fn get_state(&self) -> ListState {
-        self.state.clone()
-    }
-
-    pub fn state_select(&mut self, idx: usize) {
-        self.state.select(Some(idx));
-    }
-
-    pub fn get_current_idx(&self) -> Option<usize> {
-        self.state.selected()
-    }
-
-    pub fn next(&mut self) {
-        match self.state.selected() {
-            Some(s) => {
-                if !self.items.is_empty() {
-                    self.state.select(Some(s.saturating_add(1)));
-                } else {
-                    self.state.select(None);
-                }
-            }
-            None => {
-                if !self.items.is_empty() {
-                    self.state.select(Some(0));
-                } else {
-                    self.state.select(None);
-                }
-            }
-        }
-    }
-
-    pub fn previous(&mut self) {
-        match self.state.selected() {
-            Some(s) => {
-                self.state.select(Some(s.saturating_sub(1)));
-            }
-            None => {
-                self.state.select(None);
-            }
-        };
     }
 }
 
@@ -183,24 +145,5 @@ mod tests {
         log_groups.push_items(&mut groups, false);
         let expected = LogGroups::new(get_log_groups(0, 5, false));
         assert_eq!(expected.items, log_groups.items);
-    }
-
-    #[test]
-    fn test_state_iterate() {
-        let mut log_groups = LogGroups::new(get_log_groups(0, 2, false));
-        log_groups.next();
-        log_groups.next();
-        assert_eq!(Some(1), log_groups.state.selected());
-        log_groups.previous();
-        assert_eq!(Some(0), log_groups.state.selected());
-        let mut log_groups = LogGroups::new(get_log_groups(0, 2, false));
-        log_groups.next();
-        log_groups.items = vec![];
-        log_groups.next();
-        assert_eq!(None, log_groups.state.selected());
-        log_groups.previous();
-        assert_eq!(None, log_groups.state.selected());
-        log_groups.next();
-        assert_eq!(None, log_groups.state.selected());
     }
 }

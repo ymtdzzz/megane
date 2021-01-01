@@ -21,6 +21,10 @@ impl LogEvents {
         self.items = items;
     }
 
+    pub fn items(&self) -> &Vec<FilteredLogEvent> {
+        &self.items
+    }
+
     pub fn get_message(&self, idx: usize) -> Option<String> {
         if let Some(item) = self.items.get(idx) {
             item.message.clone()

@@ -44,6 +44,19 @@ pub fn get_log_groups(from: usize, to: usize, has_more: bool) -> Vec<LogGroup> {
     groups
 }
 
+pub fn make_log_events(from: usize, to: usize, timestamp: u64) -> Vec<FilteredLogEvent> {
+    let mut events = vec![];
+    for i in from..=to {
+        events.push(FilteredLogEvent {
+            event_id: Some(String::from(i.to_string())),
+            message: Some(format!("log_event_{}", i.to_string())),
+            timestamp: Some((timestamp + (i as u64)) as i64),
+            ..Default::default()
+        });
+    }
+    events
+}
+
 pub fn get_events(from: usize, to: usize, has_more: bool) -> Vec<FilteredLogEvent> {
     let mut events = vec![];
     for i in from..to {

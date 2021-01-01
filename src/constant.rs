@@ -10,6 +10,8 @@ lazy_static! {
     pub static ref MAX_LOG_GROUP_SELECTION: usize = 4;
     pub static ref HELP_INSTRUCTION: String = String::from("'?' to help");
     pub static ref LOADER: String = String::from("⣾⣽⣻⢿⡿⣟⣯⣷");
+    pub static ref LOG_EVENTS_HEADER: [String; 2] =
+        [String::from("timestamp"), String::from("event")];
     pub static ref HELP_MESSAGE: String = String::from(
         r#"
 <Navigation>

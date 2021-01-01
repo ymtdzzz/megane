@@ -235,7 +235,7 @@ where
                         for i in log_groups_to_create {
                             let idx = self.event_areas.len().saturating_sub(1);
                             let state = Arc::clone(&self.logevent_states[idx]);
-                            self.event_areas.push(EventArea::new(i.to_string(), state));
+                            self.event_areas.push(EventArea::new(i, state));
                         }
                     }
                 }
@@ -289,6 +289,16 @@ mod tests {
                         }
                     } else {
                         ch.set_fg(side_menu_color);
+                    }
+                } else if y == 1 {
+                    if ch.symbol != " " && ch.symbol != "│" {
+                        ch.set_fg(Color::White);
+                    } else if ch.symbol == "│" {
+                        if x >= side_menu_length {
+                            ch.set_fg(event_area_color);
+                        } else {
+                            ch.set_fg(side_menu_color);
+                        }
                     }
                 } else if y == 8 {
                 } else if ch.symbol != " " {
@@ -353,7 +363,7 @@ mod tests {
         app.event_areas.push(EventArea::default());
         let lines = vec![
             "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
-            "│                            ││                                                                    │",
+            "│                            ││timestamp      event                                                │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -368,7 +378,7 @@ mod tests {
         app.toggle_side_fold();
         let lines = vec![
             "┌L┐┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
-            "│ ││                                                                                               │",
+            "│ ││timestamp           event                                                                      │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
@@ -384,7 +394,7 @@ mod tests {
         app.select_state = SelectState::EventAreas(0);
         let lines = vec![
             "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
-            "│                            ││                                                                    │",
+            "│                            ││timestamp      event                                                │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -443,10 +453,8 @@ mod tests {
     #[tokio::test]
     async fn test_handler_event_update_eventarea() {
         let mut app: App<TestBackend> = App::default();
-        app.event_areas
-            .push(EventArea::new(String::from("log_group_1")));
-        app.event_areas
-            .push(EventArea::new(String::from("log_group_2")));
+        app.event_areas.push(EventArea::default());
+        app.event_areas.push(EventArea::default());
         assert!(
             app.handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
                 .await

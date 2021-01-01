@@ -114,6 +114,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use chrono::{DateTime, Local, TimeZone};
     use crossterm::event::{KeyCode, KeyModifiers};
     use tui::{backend::TestBackend, buffer::Buffer, style::Color};
 
@@ -177,13 +178,29 @@ mod tests {
             "test-log-group",
             Arc::new(Mutex::new(LogEventsState::default())),
         );
+        let dt1: DateTime<Local> = Local.timestamp(1609426800, 0);
+        let dt2: DateTime<Local> = Local.timestamp(1609426801, 0);
+        let dt3: DateTime<Local> = Local.timestamp(1609426802, 0);
+        let format = "%Y-%m-%d %H:%M:%S";
+        let line1 = format!(
+            "│{}  log_event_0                                                                  │",
+            dt1.format(format).to_string()
+        );
+        let line2 = format!(
+            "│{}  log_event_1                                                                  │",
+            dt2.format(format).to_string()
+        );
+        let line3 = format!(
+            "│{}  log_event_2                                                                  │",
+            dt3.format(format).to_string()
+        );
         let lines = vec![
             "┌test-log-group────────────────────────────────────────────────────────────────────────────────────┐",
             "│timestamp            event                                                                        │",
             "│                                                                                                  │",
-            "│2021-01-01 00:00:00  log_event_0                                                                  │",
-            "│2021-01-01 00:00:01  log_event_1                                                                  │",
-            "│2021-01-01 00:00:02  log_event_2                                                                  │",
+            &line1,
+            &line2,
+            &line3,
             "│                                                                                                  │",
             "│                                                                                                  │",
             "│                                                                                                  │",

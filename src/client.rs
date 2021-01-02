@@ -5,6 +5,7 @@ use rusoto_logs::{
 };
 
 /// rusoto wrapper
+#[derive(Clone)]
 pub struct LogClient {
     client: CloudWatchLogsClient,
 }

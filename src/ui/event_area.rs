@@ -82,7 +82,7 @@ where
                 rows.push(Row::Data(
                     vec![
                         if let Some(time) = item.timestamp {
-                            let dt: DateTime<Local> = Local.timestamp(time, 0);
+                            let dt: DateTime<Local> = Local.timestamp(time / 1000, 0);
                             dt.to_string()
                         } else {
                             "".to_string()

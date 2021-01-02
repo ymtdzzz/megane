@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
 use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -8,6 +9,7 @@ use tui::{
 };
 
 use crate::{
+    event::LogEventEvent,
     state::logevents_state::LogEventsState,
     ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
 };
@@ -25,6 +27,7 @@ where
     side_menu: SideMenu<B>,
     event_areas: Vec<EventArea<B>>,
     logevent_states: [Arc<Mutex<LogEventsState>>; 4],
+    logevent_inst_txs: [mpsc::Sender<LogEventEvent>; 4],
     status_bar: StatusBar<B>,
     select_state: SelectState,
     show_help: bool,
@@ -40,6 +43,7 @@ where
         side_menu: SideMenu<B>,
         event_areas: Vec<EventArea<B>>,
         logevent_states: [Arc<Mutex<LogEventsState>>; 4],
+        logevent_inst_txs: [mpsc::Sender<LogEventEvent>; 4],
         status_bar: StatusBar<B>,
         show_help: bool,
         fold: bool,
@@ -48,6 +52,7 @@ where
             side_menu,
             event_areas,
             logevent_states,
+            logevent_inst_txs,
             status_bar,
             select_state: SelectState::SideMenu,
             show_help,
@@ -117,6 +122,15 @@ where
     B: Backend,
 {
     fn default() -> Self {
+        // dummy channel
+        let (tx1, _rx1): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
+        let (tx2, _rx2): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
+        let (tx3, _rx3): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
+        let (tx4, _rx4): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
         App {
             side_menu: SideMenu::default(),
             event_areas: vec![],
@@ -126,6 +140,7 @@ where
                 Arc::new(Mutex::new(LogEventsState::default())),
                 Arc::new(Mutex::new(LogEventsState::default())),
             ],
+            logevent_inst_txs: [tx1, tx2, tx3, tx4],
             status_bar: StatusBar::default(),
             select_state: SelectState::SideMenu,
             show_help: false,
@@ -230,12 +245,16 @@ where
                         for i in idx_to_remove {
                             if self.event_areas.len() > i {
                                 self.event_areas.remove(i);
+                                self.logevent_states[i].lock().unwrap().reset();
                             }
                         }
                         for i in log_groups_to_create {
                             let idx = self.event_areas.len().saturating_sub(1);
                             let state = Arc::clone(&self.logevent_states[idx]);
                             self.event_areas.push(EventArea::new(i, state));
+                            self.logevent_inst_txs[idx]
+                                .send(LogEventEvent::FetchLogEvents(i.to_string()))
+                                .await;
                         }
                     }
                 }

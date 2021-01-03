@@ -34,7 +34,7 @@ impl EventHandler for LogEventEventHandler {
             // TODO: try_lock()?
             // TODO: error handling
             self.state.lock().unwrap().is_fetching = true;
-            let (mut fetched_log_events, state) = self.client.fetch_logs(&gname).await?;
+            let (mut fetched_log_events, _state) = self.client.fetch_logs(&gname).await?;
             self.state
                 .lock()
                 .unwrap()

@@ -18,7 +18,7 @@ use megane::{
     app::App,
     client::LogClient,
     constant::HELP_INSTRUCTION,
-    event::{LogEventEvent, LogGroupEvent},
+    event::LogGroupEvent,
     handler::{
         input_event_handler::InputEventHandler, logevent_event_handler::LogEventEventHandler,
         loggroup_event_handler::LogGroupEventHandler, main_event_handler::MainEventHandler,

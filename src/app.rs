@@ -252,7 +252,7 @@ where
                             let idx = self.event_areas.len().saturating_sub(1);
                             let state = Arc::clone(&self.logevent_states[idx]);
                             self.event_areas.push(EventArea::new(i, state));
-                            self.logevent_inst_txs[idx]
+                            let _ = self.logevent_inst_txs[idx]
                                 .send(LogEventEvent::FetchLogEvents(i.to_string()))
                                 .await;
                         }

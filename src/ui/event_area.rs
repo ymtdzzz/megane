@@ -79,8 +79,10 @@ where
         let mut rows = vec![];
         if let Ok(s) = self.state.try_lock() {
             s.events.items().iter().for_each(|item| {
-                rows.push(Row::Data(
-                    vec![
+                rows.push(
+                    Row::new(vec![
+                        // TODO: "v" when its fold flag is false
+                        ">".to_string(),
                         if let Some(time) = item.timestamp {
                             let dt: DateTime<Local> = Local.timestamp(time / 1000, 0);
                             dt.to_string()
@@ -88,19 +90,30 @@ where
                             "".to_string()
                         },
                         if let Some(msg) = &item.message {
-                            msg.to_string()
+                            // TODO: insert newline when its fold flag is false
+                            let m = msg.clone();
+                            // if m.len() > 10 {
+                            //     m.insert_str(10, "\n");
+                            // }
+                            m
                         } else {
                             "".to_string()
                         },
-                    ]
-                    .into_iter(),
-                ));
+                    ])
+                    .height(1),
+                );
             });
         }
-        let table = Table::new(constant::LOG_EVENTS_HEADER.iter(), rows.into_iter())
+        let table = Table::new(rows)
+            .header(
+                Row::new(vec![" ", "Timestamp", "Event"]).style(Style::default().fg(Color::White)),
+            )
             .block(block)
-            .header_style(Style::default().fg(Color::White))
-            .widths(&[Constraint::Percentage(20), Constraint::Percentage(80)])
+            .widths(&[
+                Constraint::Length(2),
+                Constraint::Percentage(20),
+                Constraint::Percentage(80),
+            ])
             .style(Style::default())
             .column_spacing(1);
 

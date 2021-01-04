@@ -3,27 +3,27 @@
         {
             "eventId": "1",
             "message": "log_event_1",
-            "timestamp": 1609426801
+            "timestamp": 1609426801000
         },
         {
             "eventId": "2",
             "message": "log_event_2",
-            "timestamp": 1609426802
+            "timestamp": 1609426802000
         },
         {
             "eventId": "3",
             "message": "log_event_3",
-            "timestamp": 1609426803
+            "timestamp": 1609426803000
         },
         {
             "eventId": "4",
             "message": "log_event_4",
-            "timestamp": 1609426804
+            "timestamp": 1609426804000
         },
         {
             "eventId": "5",
             "message": "log_event_5",
-            "timestamp": 1609426805
+            "timestamp": 1609426805000
         }
     ],
     "nextToken": "next-token"

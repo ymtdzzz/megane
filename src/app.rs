@@ -115,6 +115,63 @@ where
     pub fn toggle_show_help(&mut self) {
         self.show_help = !self.show_help;
     }
+
+    pub fn rotate_select_state(&mut self, key: KeyCode) {
+        let event_areas_len = self.event_areas.len();
+        match self.select_state {
+            SelectState::SideMenu => match key {
+                KeyCode::Right => {
+                    if event_areas_len > 0 {
+                        self.select_state = SelectState::EventAreas(0);
+                    }
+                }
+                _ => {}
+            },
+            SelectState::EventAreas(idx) => match key {
+                KeyCode::Left => match idx {
+                    0 => self.select_state = SelectState::SideMenu,
+                    1 => self.select_state = SelectState::EventAreas(0),
+                    2 => self.select_state = SelectState::SideMenu,
+                    3 => self.select_state = SelectState::EventAreas(2),
+                    _ => {}
+                },
+                KeyCode::Right => match idx {
+                    0 => {
+                        if event_areas_len > 1 {
+                            self.select_state = SelectState::EventAreas(1);
+                        }
+                    }
+                    2 => {
+                        if event_areas_len > 3 {
+                            self.select_state = SelectState::EventAreas(3);
+                        } else {
+                            self.select_state = SelectState::EventAreas(1);
+                        }
+                    }
+                    _ => {}
+                },
+                KeyCode::Down => match idx {
+                    0 => {
+                        if event_areas_len > 2 {
+                            self.select_state = SelectState::EventAreas(2);
+                        }
+                    }
+                    1 => {
+                        if event_areas_len > 3 {
+                            self.select_state = SelectState::EventAreas(3);
+                        }
+                    }
+                    _ => {}
+                },
+                KeyCode::Up => match idx {
+                    2 => self.select_state = SelectState::EventAreas(0),
+                    3 => self.select_state = SelectState::EventAreas(1),
+                    _ => {}
+                },
+                _ => {}
+            },
+        }
+    }
 }
 
 impl<B> Default for App<B>
@@ -215,6 +272,18 @@ where
                 KeyCode::Tab => {
                     self.toggle_side_fold();
                 }
+                KeyCode::Right => {
+                    self.rotate_select_state(KeyCode::Right);
+                }
+                KeyCode::Up => {
+                    self.rotate_select_state(KeyCode::Up);
+                }
+                KeyCode::Left => {
+                    self.rotate_select_state(KeyCode::Left);
+                }
+                KeyCode::Down => {
+                    self.rotate_select_state(KeyCode::Down);
+                }
                 KeyCode::Enter => {
                     if let SelectState::SideMenu = self.select_state {
                         // log group selection updated
@@ -279,6 +348,7 @@ mod tests {
         event_area_color: Color,
         lines: Vec<&str>,
         side_menu_length: u16,
+        header_exists: bool,
     ) {
         let mut terminal = get_test_terminal(100, 10);
         let lines = if !lines.is_empty() {
@@ -310,13 +380,17 @@ mod tests {
                         ch.set_fg(side_menu_color);
                     }
                 } else if y == 1 {
-                    if ch.symbol != " " && ch.symbol != "│" {
-                        ch.set_fg(Color::White);
-                    } else if ch.symbol == "│" {
+                    if ch.symbol == "│" {
                         if x >= side_menu_length {
                             ch.set_fg(event_area_color);
                         } else {
                             ch.set_fg(side_menu_color);
+                        }
+                    } else {
+                        if x >= side_menu_length {
+                            if header_exists {
+                                ch.set_fg(Color::White);
+                            }
                         }
                     }
                 } else if y == 8 {
@@ -378,11 +452,11 @@ mod tests {
     #[tokio::test]
     async fn test_draw() {
         let mut app: App<TestBackend> = App::default();
-        test_case(&mut app, Color::Yellow, Color::White, vec![], 30);
+        test_case(&mut app, Color::Yellow, Color::White, vec![], 30, false);
         app.event_areas.push(EventArea::default());
         let lines = vec![
             "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
-            "│                            ││timestamp      event                                                │",
+            "│                            ││   Timestamp     Event                                              │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -392,12 +466,12 @@ mod tests {
             "                                                                                     initial message",
             "                                                                                                    ",
         ];
-        test_case(&mut app, Color::Yellow, Color::White, lines, 30);
+        test_case(&mut app, Color::Yellow, Color::White, lines, 30, true);
         // folding side menu
         app.toggle_side_fold();
         let lines = vec![
             "┌L┐┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
-            "│ ││timestamp           event                                                                      │",
+            "│ ││   Timestamp           Event                                                                   │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
@@ -407,13 +481,13 @@ mod tests {
             "                                                                                     initial message",
             "                                                                                                    ",
         ];
-        test_case(&mut app, Color::Yellow, Color::White, lines, 3);
+        test_case(&mut app, Color::Yellow, Color::White, lines, 3, true);
         // event area selected
         app.toggle_side_fold();
         app.select_state = SelectState::EventAreas(0);
         let lines = vec![
             "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
-            "│                            ││timestamp      event                                                │",
+            "│                            ││   Timestamp     Event                                              │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -423,7 +497,7 @@ mod tests {
             "                                                                                     initial message",
             "                                                                                                    ",
         ];
-        test_case(&mut app, Color::White, Color::Yellow, lines, 30);
+        test_case(&mut app, Color::White, Color::Yellow, lines, 30, true);
         // help dialog
         app.toggle_show_help();
         let lines = vec![
@@ -438,7 +512,7 @@ mod tests {
             "│                                                                                                  │",
             "└──────────────────────────────────────────────────────────────────────────────────────────────────┘",
         ];
-        test_case(&mut app, Color::Reset, Color::Reset, lines, 30);
+        test_case(&mut app, Color::Reset, Color::Reset, lines, 30, false);
     }
 
     #[tokio::test]

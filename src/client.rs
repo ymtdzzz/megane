@@ -76,7 +76,7 @@ mod tests {
         let mock_client = get_mock_client("logevents_01.json");
         let client = LogClient::new(mock_client);
         let (result, next_token) = client.fetch_logs("test-log-group").await.unwrap();
-        let expect = make_log_events(1, 5, 1609426800);
+        let expect = make_log_events(1, 5, 1609426800000);
         assert!(next_token.is_some());
         assert_eq!(expect, result);
     }

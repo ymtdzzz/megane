@@ -50,7 +50,7 @@ pub fn make_log_events(from: usize, to: usize, timestamp: u64) -> Vec<FilteredLo
         events.push(FilteredLogEvent {
             event_id: Some(String::from(i.to_string())),
             message: Some(format!("log_event_{}", i.to_string())),
-            timestamp: Some((timestamp + (i as u64)) as i64),
+            timestamp: Some((timestamp + ((i * 1000) as u64)) as i64),
             ..Default::default()
         });
     }

@@ -141,7 +141,7 @@ mod tests {
         } else {
             vec![
                 "┌Events────────────────────────────────────────────────────────────────────────────────────────────┐",
-                "│timestamp            event                                                                        │",
+                "│   Timestamp           Event                                                                      │",
                 "│                                                                                                  │",
                 "│                                                                                                  │",
                 "│                                                                                                  │",
@@ -164,7 +164,7 @@ mod tests {
                     } else if ch.symbol == "│" {
                         ch.set_fg(color);
                     } else {
-                        ch.set_fg(Color::Reset);
+                        ch.set_fg(Color::White);
                     }
                 } else if ch.symbol == "│" {
                     ch.set_fg(color);
@@ -196,24 +196,24 @@ mod tests {
         let dt3: DateTime<Local> = Local.timestamp(1609426802, 0);
         let format = "%Y-%m-%d %H:%M:%S";
         let line1 = format!(
-            "│{}  log_event_0                                                                  │",
+            "│>  {} log_event_0                                                                │",
             dt1.format(format).to_string()
         );
         let line2 = format!(
-            "│{}  log_event_1                                                                  │",
+            "│>  {} log_event_1                                                                │",
             dt2.format(format).to_string()
         );
         let line3 = format!(
-            "│{}  log_event_2                                                                  │",
+            "│>  {} log_event_2                                                                │",
             dt3.format(format).to_string()
         );
         let lines = vec![
             "┌test-log-group────────────────────────────────────────────────────────────────────────────────────┐",
-            "│timestamp            event                                                                        │",
-            "│                                                                                                  │",
+            "│   Timestamp           Event                                                                      │",
             &line1,
             &line2,
             &line3,
+            "│                                                                                                  │",
             "│                                                                                                  │",
             "│                                                                                                  │",
             "│                                                                                                  │",
@@ -224,7 +224,7 @@ mod tests {
             .lock()
             .unwrap()
             .events
-            .set_items(make_log_events(0, 2, 1609426800));
+            .set_items(make_log_events(0, 2, 1609426800000));
         test_case(&mut event_area, Color::White, lines);
     }
 

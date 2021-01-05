@@ -1,5 +1,5 @@
 use rusoto_logs::FilteredLogEvent;
-use tui::widgets::TableState;
+
 
 use super::constant::*;
 

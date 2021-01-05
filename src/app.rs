@@ -390,12 +390,8 @@ mod tests {
                         } else {
                             ch.set_fg(side_menu_color);
                         }
-                    } else {
-                        if x >= side_menu_length {
-                            if header_exists {
-                                ch.set_fg(Color::White);
-                            }
-                        }
+                    } else if x >= side_menu_length && header_exists {
+                        ch.set_fg(Color::White);
                     }
                 } else if y == 8 {
                 } else if ch.symbol != " " {

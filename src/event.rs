@@ -4,7 +4,7 @@ pub enum LogGroupEvent {
 }
 
 pub enum LogEventEvent {
-    FetchLogEvents(String),
+    FetchLogEvents(String, Option<String>),
     Abort,
 }
 

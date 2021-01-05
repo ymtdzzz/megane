@@ -30,16 +30,18 @@ impl LogEventEventHandler {
 #[async_trait]
 impl EventHandler for LogEventEventHandler {
     async fn run(&mut self) -> Result<()> {
-        while let LogEventEvent::FetchLogEvents(gname) = self.inst_rx.recv().await.unwrap() {
+        while let LogEventEvent::FetchLogEvents(gname, token) = self.inst_rx.recv().await.unwrap() {
             // TODO: try_lock()?
             // TODO: error handling
             self.state.lock().unwrap().is_fetching = true;
-            let (mut fetched_log_events, _state) = self.client.fetch_logs(&gname).await?;
+            let (mut fetched_log_events, next_token) =
+                self.client.fetch_logs(&gname, token).await?;
             self.state
                 .lock()
                 .unwrap()
                 .events
                 .push_items(&mut fetched_log_events, None);
+            self.state.lock().unwrap().next_token = next_token;
             self.state.lock().unwrap().is_fetching = false;
         }
         Ok(())

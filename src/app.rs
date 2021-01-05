@@ -320,9 +320,13 @@ where
                         for i in log_groups_to_create {
                             let idx = self.event_areas.len();
                             let state = Arc::clone(&self.logevent_states[idx]);
-                            self.event_areas.push(EventArea::new(i, state));
+                            self.event_areas.push(EventArea::new(
+                                i,
+                                state,
+                                mpsc::Sender::clone(&self.logevent_inst_txs[idx]),
+                            ));
                             let _ = self.logevent_inst_txs[idx]
-                                .send(LogEventEvent::FetchLogEvents(i.to_string()))
+                                .send(LogEventEvent::FetchLogEvents(i.to_string(), None))
                                 .await;
                         }
                     }

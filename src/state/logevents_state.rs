@@ -32,7 +32,9 @@ impl LogEventsState {
         match self.state.selected() {
             Some(s) => {
                 if self.events.has_items() {
-                    self.state.select(Some(s.saturating_add(1)));
+                    if s <= self.events.items().len() {
+                        self.state.select(Some(s.saturating_add(1)));
+                    }
                 } else {
                     self.state.select(None);
                 }
@@ -56,6 +58,13 @@ impl LogEventsState {
                 self.state.select(None);
             }
         };
+    }
+
+    pub fn need_more_fetching(&self) -> bool {
+        if let Some(s) = self.state.selected() {
+            return self.events.has_items() && s == self.events.items().len() + 1;
+        }
+        false
     }
 }
 

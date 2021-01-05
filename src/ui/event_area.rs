@@ -6,6 +6,7 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
 use crossterm::event::{KeyCode, KeyEvent};
+use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
     layout::{Constraint, Rect},
@@ -14,7 +15,10 @@ use tui::{
     Frame,
 };
 
-use crate::{constant, state::logevents_state::LogEventsState, ui::Drawable};
+use crate::{
+    constant, event::LogEventEvent, loader::Loader, state::logevents_state::LogEventsState,
+    ui::Drawable,
+};
 
 pub struct EventArea<B>
 where
@@ -22,7 +26,9 @@ where
 {
     log_group_name: String,
     state: Arc<Mutex<LogEventsState>>,
+    logevent_inst_tx: mpsc::Sender<LogEventEvent>,
     is_selected: bool,
+    loader: Loader,
     _phantom: PhantomData<B>,
 }
 
@@ -30,11 +36,17 @@ impl<B> EventArea<B>
 where
     B: Backend,
 {
-    pub fn new(log_group_name: &str, state: Arc<Mutex<LogEventsState>>) -> Self {
+    pub fn new(
+        log_group_name: &str,
+        state: Arc<Mutex<LogEventsState>>,
+        logevent_inst_tx: mpsc::Sender<LogEventEvent>,
+    ) -> Self {
         EventArea {
             log_group_name: log_group_name.to_string(),
             state,
+            logevent_inst_tx,
             is_selected: false,
+            loader: Loader::new(constant::LOADER.clone()),
             _phantom: PhantomData,
         }
     }
@@ -53,10 +65,14 @@ where
     B: Backend,
 {
     fn default() -> Self {
+        // dummy sender
+        let (tx, _) = mpsc::channel(1);
         EventArea {
             log_group_name: String::from("Events"),
             state: Arc::new(Mutex::new(LogEventsState::default())),
+            logevent_inst_tx: tx,
             is_selected: false,
+            loader: Loader::new(constant::LOADER.clone()),
             _phantom: PhantomData,
         }
     }
@@ -105,6 +121,20 @@ where
                     .height(1),
                 );
             });
+            if s.is_fetching {
+                rows.push(Row::new(vec![
+                    // TODO: export function
+                    self.loader.get_char().to_string(),
+                    "".to_string(),
+                    "".to_string(),
+                ]));
+            } else if s.next_token.is_some() {
+                rows.push(Row::new(vec![
+                    "".to_string(),
+                    "More...".to_string(),
+                    "...".to_string(),
+                ]));
+            }
         }
         let table = Table::new(rows)
             .header(
@@ -125,22 +155,39 @@ where
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
         if self.is_selected {
-            let mut state = self.state.lock();
-            match event.code {
-                KeyCode::Char(c) => match c {
-                    'j' => {
-                        if let Ok(s) = state.as_mut() {
-                            s.next();
+            let mut next_token = None;
+            let mut need_more_fetching = false;
+            {
+                let mut state = self.state.lock();
+                match event.code {
+                    KeyCode::Char(c) => match c {
+                        'j' => {
+                            if let Ok(s) = state.as_mut() {
+                                s.next();
+                                if s.need_more_fetching() {
+                                    next_token = s.next_token.clone();
+                                    need_more_fetching = true;
+                                }
+                            }
                         }
-                    }
-                    'k' => {
-                        if let Ok(s) = state.as_mut() {
-                            s.previous();
+                        'k' => {
+                            if let Ok(s) = state.as_mut() {
+                                s.previous();
+                            }
                         }
-                    }
+                        _ => {}
+                    },
                     _ => {}
-                },
-                _ => {}
+                }
+            }
+            if need_more_fetching {
+                let _ = self
+                    .logevent_inst_tx
+                    .send(LogEventEvent::FetchLogEvents(
+                        self.log_group_name.clone(),
+                        next_token,
+                    ))
+                    .await;
             }
         }
         false
@@ -209,9 +256,11 @@ mod tests {
         event_area.set_select(true);
         test_case(&mut event_area, Color::Yellow, vec![]);
         // new
+        let (tx, _) = mpsc::channel(1);
         let mut event_area: EventArea<TestBackend> = EventArea::new(
             "test-log-group",
             Arc::new(Mutex::new(LogEventsState::default())),
+            tx,
         );
         let dt1: DateTime<Local> = Local.timestamp(1609426800, 0);
         let dt2: DateTime<Local> = Local.timestamp(1609426801, 0);

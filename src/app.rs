@@ -318,7 +318,7 @@ where
                             }
                         }
                         for i in log_groups_to_create {
-                            let idx = self.event_areas.len().saturating_sub(1);
+                            let idx = self.event_areas.len();
                             let state = Arc::clone(&self.logevent_states[idx]);
                             self.event_areas.push(EventArea::new(i, state));
                             let _ = self.logevent_inst_txs[idx]

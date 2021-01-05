@@ -6,15 +6,11 @@ use super::constant::*;
 #[derive(Debug)]
 pub struct LogEvents {
     items: Vec<FilteredLogEvent>,
-    state: TableState,
 }
 
 impl LogEvents {
     pub fn new(items: Vec<FilteredLogEvent>) -> Self {
-        Self {
-            items,
-            state: TableState::default(),
-        }
+        Self { items }
     }
 
     pub fn set_items(&mut self, items: Vec<FilteredLogEvent>) {
@@ -35,7 +31,6 @@ impl LogEvents {
 
     pub fn clear_items(&mut self) {
         self.items = vec![];
-        self.state = TableState::default();
     }
 
     /// This method is used when pushing fetched items which possibly contains duplicate items.
@@ -115,6 +110,10 @@ impl LogEvents {
             };
             self.items.push(more);
         }
+    }
+
+    pub fn has_items(&self) -> bool {
+        !self.items.is_empty()
     }
 }
 

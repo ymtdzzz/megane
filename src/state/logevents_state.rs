@@ -1,11 +1,14 @@
 use crate::logevents::*;
 
+use tui::widgets::TableState;
+
 /// This struct is for managing log events state.
 pub struct LogEventsState {
     pub events: LogEvents,
     pub next_token: Option<String>,
     pub is_fetching: bool,
     pub current_log_group: Option<String>,
+    pub state: TableState,
 }
 
 impl LogEventsState {
@@ -15,12 +18,44 @@ impl LogEventsState {
             next_token: None,
             is_fetching: false,
             current_log_group: None,
+            state: TableState::default(),
         }
     }
 
     pub fn reset(&mut self) {
         self.events.clear_items();
+        self.state = TableState::default();
         self.next_token = None;
+    }
+
+    pub fn next(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                if self.events.has_items() {
+                    self.state.select(Some(s.saturating_add(1)));
+                } else {
+                    self.state.select(None);
+                }
+            }
+            None => {
+                if self.events.has_items() {
+                    self.state.select(Some(0));
+                } else {
+                    self.state.select(None);
+                }
+            }
+        }
+    }
+
+    pub fn previous(&mut self) {
+        match self.state.selected() {
+            Some(s) => {
+                self.state.select(Some(s.saturating_sub(1)));
+            }
+            None => {
+                self.state.select(None);
+            }
+        };
     }
 }
 

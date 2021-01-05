@@ -5,11 +5,11 @@ use std::{
 
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
     layout::{Constraint, Rect},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     widgets::{Block, Borders, Row, Table, TableState},
     Frame,
 };
@@ -77,7 +77,9 @@ where
             })
             .title(self.log_group_name.as_ref());
         let mut rows = vec![];
+        let mut state = TableState::default();
         if let Ok(s) = self.state.try_lock() {
+            state = s.state.clone();
             s.events.items().iter().for_each(|item| {
                 rows.push(
                     Row::new(vec![
@@ -114,13 +116,33 @@ where
                 Constraint::Percentage(20),
                 Constraint::Percentage(80),
             ])
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
             .style(Style::default())
             .column_spacing(1);
 
-        f.render_stateful_widget(table, area, &mut TableState::default());
+        f.render_stateful_widget(table, area, &mut state);
     }
 
-    async fn handle_event(&mut self, _event: KeyEvent) -> bool {
+    async fn handle_event(&mut self, event: KeyEvent) -> bool {
+        if self.is_selected {
+            let mut state = self.state.lock();
+            match event.code {
+                KeyCode::Char(c) => match c {
+                    'j' => {
+                        if let Ok(s) = state.as_mut() {
+                            s.next();
+                        }
+                    }
+                    'k' => {
+                        if let Ok(s) = state.as_mut() {
+                            s.previous();
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
         false
     }
 }

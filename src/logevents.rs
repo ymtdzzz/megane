@@ -1,6 +1,5 @@
 use rusoto_logs::FilteredLogEvent;
 
-
 use super::constant::*;
 
 #[derive(Debug)]

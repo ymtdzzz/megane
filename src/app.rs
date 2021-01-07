@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
 use std::sync::{Arc, Mutex};
@@ -33,6 +34,7 @@ where
     show_help: bool,
     fold: bool,
     help: Help<B>,
+    free_idx: [bool; 4],
 }
 
 impl<B> App<B>
@@ -58,6 +60,7 @@ where
             show_help,
             fold,
             help: Help::new(),
+            free_idx: [true, true, true, true],
         }
     }
 
@@ -172,6 +175,16 @@ where
             },
         }
     }
+
+    /// get index to push the next event_area
+    pub fn get_next_idx(&self) -> Result<usize> {
+        for (idx, is_free) in self.free_idx.iter().enumerate() {
+            if *is_free {
+                return Ok(idx);
+            }
+        }
+        Err(anyhow!("Free idx does not exist. Something wrong."))
+    }
 }
 
 impl<B> Default for App<B>
@@ -203,6 +216,7 @@ where
             show_help: false,
             fold: false,
             help: Help::default(),
+            free_idx: [true, true, true, true],
         }
     }
 }
@@ -315,10 +329,12 @@ where
                             if self.event_areas.len() > i {
                                 self.event_areas.remove(i);
                                 self.logevent_states[i].lock().unwrap().reset();
+                                self.free_idx[i] = true;
                             }
                         }
                         for i in log_groups_to_create {
-                            let idx = self.event_areas.len();
+                            let idx = self.get_next_idx().unwrap();
+                            self.free_idx[idx] = false;
                             let state = Arc::clone(&self.logevent_states[idx]);
                             self.event_areas.push(EventArea::new(
                                 i,

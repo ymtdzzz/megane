@@ -201,7 +201,8 @@ mod tests {
     use tui::{backend::TestBackend, buffer::Buffer, style::Color};
 
     use super::*;
-    use crate::test_helper::{get_test_terminal, make_log_events};
+    use crate::logevents::LogEvents;
+    use crate::test_helper::*;
 
     fn test_case(event_area: &mut EventArea<TestBackend>, color: Color, lines: Vec<&str>) {
         let mut terminal = get_test_terminal(100, 10);
@@ -301,11 +302,64 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_event() {
-        let mut event_area: EventArea<TestBackend> = EventArea::default();
+        let log_group_name = String::from("test_log_gruop");
+        let next_token = String::from("next_token");
+        let (tx, mut rx) = mpsc::channel(1);
+        let mut event_area: EventArea<TestBackend> = EventArea {
+            log_group_name: log_group_name.clone(),
+            logevent_inst_tx: tx,
+            ..Default::default()
+        };
         assert!(
             !event_area
                 .handle_event(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE))
                 .await
         );
+        // input 'j', cursor down
+        event_area.is_selected = true;
+        event_area.state.lock().unwrap().events = LogEvents::new(make_log_events(0, 2, 0));
+        event_area.state.lock().unwrap().state.select(Some(0));
+        event_area.state.lock().unwrap().next_token = Some(next_token.clone());
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(1), event_area.state.lock().unwrap().state.selected());
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(2), event_area.state.lock().unwrap().state.selected());
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(3), event_area.state.lock().unwrap().state.selected());
+        // send an event to fetch more events
+        let join = tokio::spawn(async move {
+            if let Some(event) = rx.recv().await {
+                let expected =
+                    LogEventEvent::FetchLogEvents(log_group_name.clone(), Some(next_token.clone()));
+                assert_eq!(expected, event);
+            }
+        });
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(4), event_area.state.lock().unwrap().state.selected());
+        let _ = join.await.unwrap();
+        // input 'j', cursor up
+        event_area.state.lock().unwrap().state.select(Some(1));
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(0), event_area.state.lock().unwrap().state.selected());
     }
 }

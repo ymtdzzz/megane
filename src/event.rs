@@ -3,6 +3,7 @@ pub enum LogGroupEvent {
     Abort,
 }
 
+#[derive(PartialEq, Debug)]
 pub enum LogEventEvent {
     FetchLogEvents(String, Option<String>),
     Abort,

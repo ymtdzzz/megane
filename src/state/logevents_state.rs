@@ -79,6 +79,8 @@ mod tests {
     use super::*;
     use rusoto_logs::FilteredLogEvent;
 
+    use crate::test_helper::*;
+
     #[test]
     fn test_new() {
         let mut state = LogEventsState::default();
@@ -95,5 +97,53 @@ mod tests {
         assert!(!state.events.is_same(&expected.events));
         state.reset();
         assert!(state.events.is_same(&expected.events));
+    }
+
+    #[test]
+    fn test_next() {
+        let mut state = LogEventsState::default();
+        state.next(); // None
+        assert!(state.state.selected().is_none());
+        state.events = LogEvents::new(make_log_events(0, 1, 0));
+        state.next(); // Some(0)
+        assert_eq!(Some(0), state.state.selected());
+        state.next(); // Some(1) means last item's idx
+        assert_eq!(Some(1), state.state.selected());
+        state.next(); // Some(2) means 'more ...' item
+        assert_eq!(Some(2), state.state.selected());
+        state.next(); // Some(3) means that should fetch more events
+        assert_eq!(Some(3), state.state.selected());
+        state.next();
+        assert_eq!(Some(3), state.state.selected());
+
+        // no events
+        state.events = LogEvents::new(vec![]);
+        state.state.select(Some(1));
+        state.next();
+        assert!(state.state.selected().is_none());
+    }
+
+    #[test]
+    fn test_previous() {
+        let mut state = LogEventsState::default();
+        state.previous();
+        assert!(state.state.selected().is_none());
+        state.state.select(Some(1));
+        state.previous();
+        assert_eq!(Some(0), state.state.selected());
+        state.previous();
+        assert_eq!(Some(0), state.state.selected());
+    }
+
+    #[test]
+    fn test_need_more_fetching() {
+        let mut state = LogEventsState::default();
+        assert!(!state.need_more_fetching());
+        state.state.select(Some(2));
+        assert!(!state.need_more_fetching());
+        state.events = LogEvents::new(make_log_events(0, 2, 0));
+        assert!(!state.need_more_fetching());
+        state.state.select(Some(4));
+        assert!(state.need_more_fetching());
     }
 }

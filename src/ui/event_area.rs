@@ -109,11 +109,11 @@ where
                         },
                         if let Some(msg) = &item.message {
                             // TODO: insert newline when its fold flag is false
-                            let m = msg.clone();
+                            //let m = msg.clone();
                             // if m.len() > 10 {
                             //     m.insert_str(10, "\n");
                             // }
-                            m
+                            msg.clone()
                         } else {
                             "".to_string()
                         },
@@ -159,8 +159,8 @@ where
             let mut need_more_fetching = false;
             {
                 let mut state = self.state.lock();
-                match event.code {
-                    KeyCode::Char(c) => match c {
+                if let KeyCode::Char(c) = event.code {
+                    match c {
                         'j' => {
                             if let Ok(s) = state.as_mut() {
                                 s.next();
@@ -176,8 +176,7 @@ where
                             }
                         }
                         _ => {}
-                    },
-                    _ => {}
+                    }
                 }
             }
             if need_more_fetching {

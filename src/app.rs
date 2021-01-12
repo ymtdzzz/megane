@@ -122,14 +122,13 @@ where
     pub fn rotate_select_state(&mut self, key: KeyCode) {
         let event_areas_len = self.event_areas.len();
         match self.select_state {
-            SelectState::SideMenu => match key {
-                KeyCode::Right => {
+            SelectState::SideMenu => {
+                if let KeyCode::Right = key {
                     if event_areas_len > 0 {
                         self.select_state = SelectState::EventAreas(0);
                     }
                 }
-                _ => {}
-            },
+            }
             SelectState::EventAreas(idx) => match key {
                 KeyCode::Left => match idx {
                     0 => self.select_state = SelectState::SideMenu,

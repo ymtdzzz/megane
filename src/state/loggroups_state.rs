@@ -179,22 +179,22 @@ mod tests {
             ListItem::new("[ ]log_group_3"),
         ];
         let exp_state = ListState::default();
-        let (res_item, res_state) = state.get_list_items("", &vec![]);
+        let (res_item, res_state) = state.get_list_items("", &[]);
         assert_eq!(exp_item, res_item);
         assert_eq!(exp_state.selected(), res_state.selected());
         let exp_item = vec![ListItem::new("[X]log_group_0")];
-        let (res_item, res_state) = state.get_list_items("0", &vec![]);
+        let (res_item, res_state) = state.get_list_items("0", &[]);
         assert_eq!(exp_item, res_item);
         assert_eq!(exp_state.selected(), res_state.selected());
         let exp_item = vec![
             ListItem::new("[X]log_group_0"),
             ListItem::new("[ ]log_group_1"),
         ];
-        let (res_item, res_state) = state.get_list_items("0", &vec!["log_group_1".to_string()]);
+        let (res_item, res_state) = state.get_list_items("0", &["log_group_1".to_string()]);
         assert_eq!(exp_item, res_item);
         assert_eq!(exp_state.selected(), res_state.selected());
         state.state_select(10);
-        let _ = state.get_list_items("", &vec![]);
+        let _ = state.get_list_items("", &[]);
         assert_eq!(Some(3), state.state.selected());
     }
 
@@ -277,9 +277,9 @@ mod tests {
             ..Default::default()
         };
         state.log_groups = LogGroups::new(log_groups.clone());
-        state.filtered_log_groups = LogGroups::new(log_groups.clone());
+        state.filtered_log_groups = LogGroups::new(log_groups);
         let expect = LogGroups::new(make_log_groups(1, 2)).items();
-        state.query_log_groups("", &vec![]);
+        state.query_log_groups("", &[]);
         assert_eq!(expect, state.filtered_log_groups.items());
     }
 }

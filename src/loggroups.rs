@@ -1,20 +1,15 @@
 use rusoto_logs::LogGroup;
-use tui::widgets::ListState;
 
 use super::constant::*;
 
 #[derive(Debug)]
 pub struct LogGroups {
     items: Vec<LogGroup>,
-    state: ListState,
 }
 
 impl LogGroups {
     pub fn new(items: Vec<LogGroup>) -> Self {
-        LogGroups {
-            items,
-            state: ListState::default(),
-        }
+        LogGroups { items }
     }
 
     pub fn set_items(&mut self, items: Vec<LogGroup>) {

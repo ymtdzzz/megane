@@ -1,13 +1,18 @@
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     Frame,
 };
 
-use crate::ui::{
-    event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable,
+use crate::{
+    event::LogEventEvent,
+    state::logevents_state::LogEventsState,
+    ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
 };
 
 /// which component selected
@@ -22,11 +27,14 @@ where
 {
     side_menu: SideMenu<B>,
     event_areas: Vec<EventArea<B>>,
+    logevent_states: [Arc<Mutex<LogEventsState>>; 4],
+    logevent_inst_txs: [mpsc::Sender<LogEventEvent>; 4],
     status_bar: StatusBar<B>,
     select_state: SelectState,
     show_help: bool,
     fold: bool,
     help: Help<B>,
+    free_idx: [bool; 4],
 }
 
 impl<B> App<B>
@@ -36,6 +44,8 @@ where
     pub async fn new(
         side_menu: SideMenu<B>,
         event_areas: Vec<EventArea<B>>,
+        logevent_states: [Arc<Mutex<LogEventsState>>; 4],
+        logevent_inst_txs: [mpsc::Sender<LogEventEvent>; 4],
         status_bar: StatusBar<B>,
         show_help: bool,
         fold: bool,
@@ -43,11 +53,14 @@ where
         App {
             side_menu,
             event_areas,
+            logevent_states,
+            logevent_inst_txs,
             status_bar,
             select_state: SelectState::SideMenu,
             show_help,
             fold,
             help: Help::new(),
+            free_idx: [true, true, true, true],
         }
     }
 
@@ -105,6 +118,72 @@ where
     pub fn toggle_show_help(&mut self) {
         self.show_help = !self.show_help;
     }
+
+    pub fn rotate_select_state(&mut self, key: KeyCode) {
+        let event_areas_len = self.event_areas.len();
+        match self.select_state {
+            SelectState::SideMenu => {
+                if let KeyCode::Right = key {
+                    if event_areas_len > 0 {
+                        self.select_state = SelectState::EventAreas(0);
+                    }
+                }
+            }
+            SelectState::EventAreas(idx) => match key {
+                KeyCode::Left => match idx {
+                    0 => self.select_state = SelectState::SideMenu,
+                    1 => self.select_state = SelectState::EventAreas(0),
+                    2 => self.select_state = SelectState::SideMenu,
+                    3 => self.select_state = SelectState::EventAreas(2),
+                    _ => {}
+                },
+                KeyCode::Right => match idx {
+                    0 => {
+                        if event_areas_len > 1 {
+                            self.select_state = SelectState::EventAreas(1);
+                        }
+                    }
+                    2 => {
+                        if event_areas_len > 3 {
+                            self.select_state = SelectState::EventAreas(3);
+                        } else {
+                            self.select_state = SelectState::EventAreas(1);
+                        }
+                    }
+                    _ => {}
+                },
+                KeyCode::Down => match idx {
+                    0 => {
+                        if event_areas_len > 2 {
+                            self.select_state = SelectState::EventAreas(2);
+                        }
+                    }
+                    1 => {
+                        if event_areas_len > 3 {
+                            self.select_state = SelectState::EventAreas(3);
+                        }
+                    }
+                    _ => {}
+                },
+                KeyCode::Up => match idx {
+                    2 => self.select_state = SelectState::EventAreas(0),
+                    3 => self.select_state = SelectState::EventAreas(1),
+                    _ => {}
+                },
+                _ => {}
+            },
+        }
+    }
+
+    /// get index to push the next event_area
+    pub fn get_next_idx(&self) -> Result<usize> {
+        for (idx, is_free) in self.free_idx.iter().enumerate() {
+            if *is_free {
+                return Ok(idx);
+            }
+        }
+        Err(anyhow!("Free idx does not exist. Something wrong."))
+    }
 }
 
 impl<B> Default for App<B>
@@ -112,14 +191,31 @@ where
     B: Backend,
 {
     fn default() -> Self {
+        // dummy channel
+        let (tx1, _rx1): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
+        let (tx2, _rx2): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
+        let (tx3, _rx3): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
+        let (tx4, _rx4): (mpsc::Sender<LogEventEvent>, mpsc::Receiver<LogEventEvent>) =
+            mpsc::channel(1);
         App {
             side_menu: SideMenu::default(),
             event_areas: vec![],
+            logevent_states: [
+                Arc::new(Mutex::new(LogEventsState::default())),
+                Arc::new(Mutex::new(LogEventsState::default())),
+                Arc::new(Mutex::new(LogEventsState::default())),
+                Arc::new(Mutex::new(LogEventsState::default())),
+            ],
+            logevent_inst_txs: [tx1, tx2, tx3, tx4],
             status_bar: StatusBar::default(),
             select_state: SelectState::SideMenu,
             show_help: false,
             fold: false,
             help: Help::default(),
+            free_idx: [true, true, true, true],
         }
     }
 }
@@ -189,6 +285,18 @@ where
                 KeyCode::Tab => {
                     self.toggle_side_fold();
                 }
+                KeyCode::Right => {
+                    self.rotate_select_state(KeyCode::Right);
+                }
+                KeyCode::Up => {
+                    self.rotate_select_state(KeyCode::Up);
+                }
+                KeyCode::Left => {
+                    self.rotate_select_state(KeyCode::Left);
+                }
+                KeyCode::Down => {
+                    self.rotate_select_state(KeyCode::Down);
+                }
                 KeyCode::Enter => {
                     if let SelectState::SideMenu = self.select_state {
                         // log group selection updated
@@ -219,10 +327,22 @@ where
                         for i in idx_to_remove {
                             if self.event_areas.len() > i {
                                 self.event_areas.remove(i);
+                                self.logevent_states[i].lock().unwrap().reset();
+                                self.free_idx[i] = true;
                             }
                         }
                         for i in log_groups_to_create {
-                            self.event_areas.push(EventArea::new(i.to_string()));
+                            let idx = self.get_next_idx().unwrap();
+                            self.free_idx[idx] = false;
+                            let state = Arc::clone(&self.logevent_states[idx]);
+                            self.event_areas.push(EventArea::new(
+                                i,
+                                state,
+                                mpsc::Sender::clone(&self.logevent_inst_txs[idx]),
+                            ));
+                            let _ = self.logevent_inst_txs[idx]
+                                .send(LogEventEvent::FetchLogEvents(i.to_string(), None))
+                                .await;
                         }
                     }
                 }
@@ -247,6 +367,7 @@ mod tests {
         event_area_color: Color,
         lines: Vec<&str>,
         side_menu_length: u16,
+        header_exists: bool,
     ) {
         let mut terminal = get_test_terminal(100, 10);
         let lines = if !lines.is_empty() {
@@ -276,6 +397,16 @@ mod tests {
                         }
                     } else {
                         ch.set_fg(side_menu_color);
+                    }
+                } else if y == 1 {
+                    if ch.symbol == "│" {
+                        if x >= side_menu_length {
+                            ch.set_fg(event_area_color);
+                        } else {
+                            ch.set_fg(side_menu_color);
+                        }
+                    } else if x >= side_menu_length && header_exists {
+                        ch.set_fg(Color::White);
                     }
                 } else if y == 8 {
                 } else if ch.symbol != " " {
@@ -336,11 +467,11 @@ mod tests {
     #[tokio::test]
     async fn test_draw() {
         let mut app: App<TestBackend> = App::default();
-        test_case(&mut app, Color::Yellow, Color::White, vec![], 30);
+        test_case(&mut app, Color::Yellow, Color::White, vec![], 30, false);
         app.event_areas.push(EventArea::default());
         let lines = vec![
             "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
-            "│                            ││                                                                    │",
+            "│                            ││   Timestamp     Event                                              │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -350,12 +481,12 @@ mod tests {
             "                                                                                     initial message",
             "                                                                                                    ",
         ];
-        test_case(&mut app, Color::Yellow, Color::White, lines, 30);
+        test_case(&mut app, Color::Yellow, Color::White, lines, 30, true);
         // folding side menu
         app.toggle_side_fold();
         let lines = vec![
             "┌L┐┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
-            "│ ││                                                                                               │",
+            "│ ││   Timestamp           Event                                                                   │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
@@ -365,13 +496,13 @@ mod tests {
             "                                                                                     initial message",
             "                                                                                                    ",
         ];
-        test_case(&mut app, Color::Yellow, Color::White, lines, 3);
+        test_case(&mut app, Color::Yellow, Color::White, lines, 3, true);
         // event area selected
         app.toggle_side_fold();
         app.select_state = SelectState::EventAreas(0);
         let lines = vec![
             "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
-            "│                            ││                                                                    │",
+            "│                            ││   Timestamp     Event                                              │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -381,7 +512,7 @@ mod tests {
             "                                                                                     initial message",
             "                                                                                                    ",
         ];
-        test_case(&mut app, Color::White, Color::Yellow, lines, 30);
+        test_case(&mut app, Color::White, Color::Yellow, lines, 30, true);
         // help dialog
         app.toggle_show_help();
         let lines = vec![
@@ -396,7 +527,7 @@ mod tests {
             "│                                                                                                  │",
             "└──────────────────────────────────────────────────────────────────────────────────────────────────┘",
         ];
-        test_case(&mut app, Color::Reset, Color::Reset, lines, 30);
+        test_case(&mut app, Color::Reset, Color::Reset, lines, 30, false);
     }
 
     #[tokio::test]
@@ -430,10 +561,8 @@ mod tests {
     #[tokio::test]
     async fn test_handler_event_update_eventarea() {
         let mut app: App<TestBackend> = App::default();
-        app.event_areas
-            .push(EventArea::new(String::from("log_group_1")));
-        app.event_areas
-            .push(EventArea::new(String::from("log_group_2")));
+        app.event_areas.push(EventArea::default());
+        app.event_areas.push(EventArea::default());
         assert!(
             app.handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
                 .await

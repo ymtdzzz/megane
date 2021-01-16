@@ -79,10 +79,7 @@ where
                 let is_fetching = s.is_fetching;
                 let (mut items, state) = s.get_list_items(&self.query, &self.selected_log_groups);
                 if is_fetching {
-                    items.push(ListItem::new(format!(
-                        "Fetching {}",
-                        self.loader.get_char().to_string()
-                    )));
+                    items.push(ListItem::new(self.loader.get_char().to_string()));
                 }
                 (items, state)
             }
@@ -203,7 +200,7 @@ mod tests {
         side_menu.state.lock().unwrap().is_fetching = true;
         let lines = vec![
             "┌Log Groups [type t┐",
-            "│Fetching ⣾        │",
+            "│⣾                 │",
             "│                  │",
             "│                  │",
             "│                  │",

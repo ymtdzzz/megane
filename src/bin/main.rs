@@ -1,4 +1,5 @@
 #![warn(rust_2018_idioms)]
+#![feature(destructuring_assignment)]
 
 use std::{
     io::Stdout,
@@ -19,10 +20,14 @@ use megane::{
     constant::HELP_INSTRUCTION,
     event::LogGroupEvent,
     handler::{
-        input_event_handler::InputEventHandler, loggroup_event_handler::LogGroupEventHandler,
-        main_event_handler::MainEventHandler, EventHandler,
+        input_event_handler::InputEventHandler, logevent_event_handler::LogEventEventHandler,
+        loggroup_event_handler::LogGroupEventHandler, main_event_handler::MainEventHandler,
+        EventHandler,
     },
-    state::{loggroups_state::LogGroupsState, status_bar_state::StatusBarState},
+    state::{
+        logevents_state::LogEventsState, loggroups_state::LogGroupsState,
+        status_bar_state::StatusBarState,
+    },
     terminal::*,
     ui::{side_menu::SideMenu, status_bar::StatusBar},
 };
@@ -43,6 +48,16 @@ async fn main() -> Result<()> {
     let log_client = LogClient::new(aws_client);
     let loggroup_state = Arc::new(Mutex::new(LogGroupsState::new()));
     let status_bar_state = Arc::new(Mutex::new(StatusBarState::new(HELP_INSTRUCTION.clone())));
+    let logevent_states = [
+        Arc::new(Mutex::new(LogEventsState::default())),
+        Arc::new(Mutex::new(LogEventsState::default())),
+        Arc::new(Mutex::new(LogEventsState::default())),
+        Arc::new(Mutex::new(LogEventsState::default())),
+    ];
+    let logevent_state_clone_0 = Arc::clone(&logevent_states[0]);
+    let logevent_state_clone_1 = Arc::clone(&logevent_states[1]);
+    let logevent_state_clone_2 = Arc::clone(&logevent_states[2]);
+    let logevent_state_clone_3 = Arc::clone(&logevent_states[3]);
 
     // input event handling
     let (input_tx, input_rx) = tokio::sync::mpsc::channel(1);
@@ -55,18 +70,56 @@ async fn main() -> Result<()> {
     // loggroup event handling
     let (mut logg_inst_tx, logg_inst_rx) = mpsc::channel(1);
     let loggroup_state_clone = Arc::clone(&loggroup_state);
+    let log_client_clone = log_client.clone();
     tokio::spawn(async {
         let mut loggroup_event_handler =
-            LogGroupEventHandler::new(log_client, loggroup_state_clone, logg_inst_rx);
+            LogGroupEventHandler::new(log_client_clone, loggroup_state_clone, logg_inst_rx);
         let _ = loggroup_event_handler.run().await;
     });
     // fetch log groups at first
     let _ = logg_inst_tx.send(LogGroupEvent::FetchLogGroups).await;
 
+    // logevent event handling
+    let (logevent_inst_tx_0, logevent_inst_rx_0) = mpsc::channel(1);
+    let (logevent_inst_tx_1, logevent_inst_rx_1) = mpsc::channel(1);
+    let (logevent_inst_tx_2, logevent_inst_rx_2) = mpsc::channel(1);
+    let (logevent_inst_tx_3, logevent_inst_rx_3) = mpsc::channel(1);
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut logevent_event_handler =
+            LogEventEventHandler::new(log_client_clone, logevent_state_clone_0, logevent_inst_rx_0);
+        let _ = logevent_event_handler.run().await;
+    });
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut logevent_event_handler =
+            LogEventEventHandler::new(log_client_clone, logevent_state_clone_1, logevent_inst_rx_1);
+        let _ = logevent_event_handler.run().await;
+    });
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut logevent_event_handler =
+            LogEventEventHandler::new(log_client_clone, logevent_state_clone_2, logevent_inst_rx_2);
+        let _ = logevent_event_handler.run().await;
+    });
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut logevent_event_handler =
+            LogEventEventHandler::new(log_client_clone, logevent_state_clone_3, logevent_inst_rx_3);
+        let _ = logevent_event_handler.run().await;
+    });
+
     // setup app
     let app: App<CrosstermBackend<Stdout>> = App::new(
         SideMenu::new(Arc::clone(&loggroup_state)),
         vec![],
+        logevent_states,
+        [
+            logevent_inst_tx_0,
+            logevent_inst_tx_1,
+            logevent_inst_tx_2,
+            logevent_inst_tx_3,
+        ],
         StatusBar::new(status_bar_state),
         false,
         false,

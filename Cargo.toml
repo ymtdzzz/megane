@@ -13,7 +13,7 @@ license = "MIT"
 lazy_static = "1.4.0"
 clap = "2.33.3"
 crossterm = "0.18.2"
-tui = { version = "0.13", default-features = false, features = ['crossterm'] }
+tui = { version = "0.14", default-features = false, features = ['crossterm'] }
 anyhow = "1.0.32"
 rusoto_core = "0.45.0"
 rusoto_cloudwatch = "0.45.0"

@@ -4,6 +4,8 @@ use tui::{backend::Backend, layout::Rect, Frame};
 
 pub mod event_area;
 pub mod help;
+pub mod search_condition_dialog;
+pub mod search_info;
 pub mod side_menu;
 pub mod status_bar;
 

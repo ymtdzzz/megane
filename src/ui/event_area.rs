@@ -5,20 +5,28 @@ use std::{
 
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
-    layout::{Constraint, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Row, Table, TableState},
     Frame,
 };
 
 use crate::{
-    constant, event::LogEventEvent, loader::Loader, state::logevents_state::LogEventsState,
-    ui::Drawable,
+    constant,
+    event::LogEventEvent,
+    loader::Loader,
+    state::logevents_state::LogEventsState,
+    ui::{search_condition_dialog::SearchConditionDialog, search_info::SearchInfo, Drawable},
 };
+
+pub enum Selection {
+    Events,
+    Search,
+}
 
 pub struct EventArea<B>
 where
@@ -29,6 +37,9 @@ where
     logevent_inst_tx: mpsc::Sender<LogEventEvent>,
     is_selected: bool,
     loader: Loader,
+    search_info: SearchInfo<B>,
+    search_condition_dialog: SearchConditionDialog<B>,
+    selection: Selection,
     _phantom: PhantomData<B>,
 }
 
@@ -47,6 +58,9 @@ where
             logevent_inst_tx,
             is_selected: false,
             loader: Loader::new(constant::LOADER.clone()),
+            search_info: SearchInfo::default(),
+            search_condition_dialog: SearchConditionDialog::default(),
+            selection: Selection::Events,
             _phantom: PhantomData,
         }
     }
@@ -73,6 +87,9 @@ where
             logevent_inst_tx: tx,
             is_selected: false,
             loader: Loader::new(constant::LOADER.clone()),
+            search_info: SearchInfo::default(),
+            search_condition_dialog: SearchConditionDialog::default(),
+            selection: Selection::Events,
             _phantom: PhantomData,
         }
     }
@@ -84,6 +101,10 @@ where
     B: Backend + Send,
 {
     fn draw(&mut self, f: &mut Frame<'_, B>, area: Rect) {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Percentage(100)].as_ref())
+            .split(area);
         let block = Block::default()
             .borders(Borders::ALL)
             .border_style(if self.is_selected {
@@ -136,46 +157,79 @@ where
                 ]));
             }
         }
-        let table = Table::new(rows)
-            .header(
-                Row::new(vec![" ", "Timestamp", "Event"]).style(Style::default().fg(Color::White)),
-            )
-            .block(block)
-            .widths(&[
-                Constraint::Length(2),
-                Constraint::Percentage(20),
-                Constraint::Percentage(80),
-            ])
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .style(Style::default())
-            .column_spacing(1);
+        let table = if let Selection::Events = self.selection {
+            Table::new(rows)
+                .block(block)
+                .header(
+                    Row::new(vec![" ", "Timestamp", "Event"])
+                        .style(Style::default().fg(Color::White)),
+                )
+                .widths(&[
+                    Constraint::Length(2),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(80),
+                ])
+                .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+                .style(Style::default())
+                .column_spacing(1)
+        } else {
+            Table::new(rows).block(block)
+        };
 
-        f.render_stateful_widget(table, area, &mut state);
+        self.search_info.draw(f, chunks[0]);
+        f.render_stateful_widget(table, chunks[1], &mut state);
+        if let Selection::Search = self.selection {
+            self.search_condition_dialog.draw(f, chunks[1]);
+        }
     }
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
         if self.is_selected {
             let mut next_token = None;
             let mut need_more_fetching = false;
+            if let Selection::Search = self.selection {
+                self.search_condition_dialog.handle_event(event).await;
+            }
             {
                 let mut state = self.state.lock();
-                if let KeyCode::Char(c) = event.code {
-                    match c {
-                        'j' => {
-                            if let Ok(s) = state.as_mut() {
-                                s.next();
-                                if s.need_more_fetching() {
-                                    next_token = s.next_token.clone();
-                                    need_more_fetching = true;
-                                }
-                            }
+                if let Selection::Search = self.selection {
+                    // search condition dialog event handling
+                    match event.code {
+                        KeyCode::Esc => {
+                            self.selection = Selection::Events;
                         }
-                        'k' => {
-                            if let Ok(s) = state.as_mut() {
-                                s.previous();
-                            }
+                        KeyCode::Enter => {
+                            self.search_info
+                                .set_state(self.search_condition_dialog.get_state());
+                            self.selection = Selection::Events;
+                            // TODO: if search condition changed, reset events and fetch them
                         }
                         _ => {}
+                    }
+                } else {
+                    if let KeyCode::Char(c) = event.code {
+                        match c {
+                            'j' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.next();
+                                    if s.need_more_fetching() {
+                                        next_token = s.next_token.clone();
+                                        need_more_fetching = true;
+                                    }
+                                }
+                            }
+                            'k' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.previous();
+                                }
+                            }
+                            's' => {
+                                if let KeyModifiers::CONTROL = event.modifiers {
+                                    self.selection = Selection::Search;
+                                }
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }

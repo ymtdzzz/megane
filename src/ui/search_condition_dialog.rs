@@ -1,29 +1,24 @@
 use std::{
     fmt::{Display, Formatter, Result},
     marker::PhantomData,
-    sync::{Arc, Mutex},
 };
 
 use async_trait::async_trait;
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
 use crossterm::event::{KeyCode, KeyEvent};
 use lazy_static::lazy_static;
-use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Paragraph, Row, Table, TableState, Wrap},
+    layout::{Constraint, Direction, Layout, Rect},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
 use crate::{
     constant,
-    event::LogEventEvent,
-    loader::Loader,
-    state::{logevents_state::LogEventsState, search_state::*},
+    state::search_state::*,
     ui::{textbox::TextBox, Drawable},
-    utils::get_inner_area,
+    utils::*,
 };
 
 lazy_static! {
@@ -191,7 +186,7 @@ where
     }
 
     fn next(&mut self) {
-        let max_idx = MODE_NUM.clone() + 1;
+        let max_idx = *MODE_NUM + 1;
         if self.focus < max_idx - 1 {
             self.focus = self.focus.saturating_add(1);
         }
@@ -263,16 +258,14 @@ where
     }
 
     fn get_timestamps(&self) -> anyhow::Result<(Option<i64>, Option<i64>)> {
-        let fmt = constant::DATE_FORMAT.clone();
+        let fmt = &*constant::DATE_FORMAT;
         let from = if self.term_from.get_input().is_empty() {
             None
         } else {
             let naive = NaiveDateTime::parse_from_str(&self.term_from.get_input(), &fmt)?;
             let local = Local.from_local_datetime(&naive).unwrap();
             let utc: DateTime<Utc> = DateTime::from(local);
-            Some(
-                utc.timestamp_millis(),
-            )
+            Some(utc.timestamp_millis())
         };
         let to = if self.term_to.get_input().is_empty() {
             None
@@ -280,9 +273,7 @@ where
             let naive = NaiveDateTime::parse_from_str(&self.term_to.get_input(), &fmt)?;
             let local = Local.from_local_datetime(&naive).unwrap();
             let utc: DateTime<Utc> = DateTime::from(local);
-            Some(
-                utc.timestamp_millis(),
-            )
+            Some(utc.timestamp_millis())
         };
         Ok((from, to))
     }
@@ -326,7 +317,7 @@ where
                     Constraint::Length(1),
                     Constraint::Length(3),
                     Constraint::Length(1),
-                    Constraint::Length(MODE_NUM.clone() as u16),
+                    Constraint::Length(*MODE_NUM as u16),
                 ]
                 .as_ref(),
             )
@@ -334,13 +325,6 @@ where
 
         // input query
         let query_title = Paragraph::new("Query").block(Block::default());
-        let query_block = Block::default()
-            .borders(Borders::ALL)
-            .style(if self.focus == 0 {
-                constant::ACTIVE_STYLE.clone()
-            } else {
-                constant::NORMAL_STYLE.clone()
-            });
 
         // input term
         let radio_areas = Layout::default()
@@ -359,7 +343,7 @@ where
             )
             .split(chunks[3]);
         // check if num of areas for radio buttons is correct
-        assert_eq!(MODE_NUM.clone() + 1, radio_areas.len());
+        assert_eq!(*MODE_NUM + 1, radio_areas.len());
 
         let term_title = Paragraph::new("Term").block(Block::default());
 
@@ -370,9 +354,9 @@ where
         MODE_LIST.clone().iter().enumerate().for_each(|(i, v)| {
             let radio = Paragraph::new(self.radios.get_radio(&v)).block(Block::default().style(
                 if i + 1 == self.focus {
-                    constant::ACTIVE_STYLE.clone()
+                    *constant::ACTIVE_STYLE
                 } else {
-                    constant::NORMAL_STYLE.clone()
+                    *constant::NORMAL_STYLE
                 },
             ));
             f.render_widget(radio, radio_areas[i]);
@@ -380,7 +364,7 @@ where
         // custom term input area
         let paragraph = Paragraph::new("~")
             .block(Block::default())
-            .style(constant::NORMAL_STYLE.clone());
+            .style(*constant::NORMAL_STYLE);
         let custom_input_areas = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(

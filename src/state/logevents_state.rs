@@ -146,6 +146,8 @@ mod tests {
         state.events = LogEvents::new(make_log_events(0, 2, 0));
         assert!(!state.need_more_fetching());
         state.state.select(Some(4));
+        assert!(!state.need_more_fetching());
+        state.next_token = Some(String::from("next token"));
         assert!(state.need_more_fetching());
     }
 }

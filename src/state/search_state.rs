@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
+use chrono::{Duration, NaiveDateTime, Utc};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SearchMode {

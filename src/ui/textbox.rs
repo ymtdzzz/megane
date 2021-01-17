@@ -1,30 +1,15 @@
-use std::{
-    fmt::{Display, Formatter, Result},
-    marker::PhantomData,
-    sync::{Arc, Mutex},
-};
+use std::marker::PhantomData;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Local, TimeZone};
 use crossterm::event::{KeyCode, KeyEvent};
-use lazy_static::lazy_static;
-use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Paragraph, Row, Table, TableState, Wrap},
+    layout::Rect,
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
-use crate::{
-    constant,
-    event::LogEventEvent,
-    loader::Loader,
-    state::{logevents_state::LogEventsState, search_state::*},
-    ui::Drawable,
-    utils::get_inner_area,
-};
+use crate::{constant, ui::Drawable};
 
 pub struct TextBox<B>
 where
@@ -55,7 +40,7 @@ where
 
     fn get_text_to_show(&self) -> String {
         let mut input_cloned = self.input.clone();
-        input_cloned.insert_str(self.cursor, "|");
+        input_cloned.insert(self.cursor, '|');
         input_cloned
     }
 
@@ -101,9 +86,9 @@ where
         let block = Block::default()
             .borders(Borders::ALL)
             .style(if self.is_selected {
-                constant::ACTIVE_STYLE.clone()
+                *constant::ACTIVE_STYLE
             } else {
-                constant::NORMAL_STYLE.clone()
+                *constant::NORMAL_STYLE
             });
         let paragraph = Paragraph::new(self.get_text_to_show()).block(block);
         f.render_widget(paragraph, area);

@@ -6,7 +6,6 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use log::*;
 use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
@@ -217,30 +216,28 @@ where
                         }
                         _ => {}
                     }
-                } else {
-                    if let KeyCode::Char(c) = event.code {
-                        match c {
-                            'j' => {
-                                if let Ok(s) = state.as_mut() {
-                                    s.next();
-                                    if !s.is_fetching && s.need_more_fetching() {
-                                        next_token = s.next_token.clone();
-                                        need_more_fetching = true;
-                                    }
+                } else if let KeyCode::Char(c) = event.code {
+                    match c {
+                        'j' => {
+                            if let Ok(s) = state.as_mut() {
+                                s.next();
+                                if !s.is_fetching && s.need_more_fetching() {
+                                    next_token = s.next_token.clone();
+                                    need_more_fetching = true;
                                 }
                             }
-                            'k' => {
-                                if let Ok(s) = state.as_mut() {
-                                    s.previous();
-                                }
-                            }
-                            's' => {
-                                if let KeyModifiers::CONTROL = event.modifiers {
-                                    self.selection = Selection::Search;
-                                }
-                            }
-                            _ => {}
                         }
+                        'k' => {
+                            if let Ok(s) = state.as_mut() {
+                                s.previous();
+                            }
+                        }
+                        's' => {
+                            if let KeyModifiers::CONTROL = event.modifiers {
+                                self.selection = Selection::Search;
+                            }
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -287,9 +284,9 @@ mod tests {
             lines
         } else {
             vec![
+                "query: [], mode: [Tail]                                                                             ",
                 "┌Events────────────────────────────────────────────────────────────────────────────────────────────┐",
                 "│   Timestamp           Event                                                                      │",
-                "│                                                                                                  │",
                 "│                                                                                                  │",
                 "│                                                                                                  │",
                 "│                                                                                                  │",
@@ -303,9 +300,9 @@ mod tests {
         for y in 0..10 {
             for x in 0..100 {
                 let ch = expected.get_mut(x, y);
-                if y == 0 || y == 9 {
+                if y == 1 || y == 9 {
                     ch.set_fg(color);
-                } else if y == 1 {
+                } else if y == 2 {
                     if ch.symbol != "│" && ch.symbol != " " {
                         ch.set_fg(Color::White);
                     } else if ch.symbol == "│" {
@@ -357,12 +354,12 @@ mod tests {
             dt3.format(format).to_string()
         );
         let lines = vec![
+            "query: [], mode: [Tail]                                                                             ",
             "┌test-log-group────────────────────────────────────────────────────────────────────────────────────┐",
             "│   Timestamp           Event                                                                      │",
             &line1,
             &line2,
             &line3,
-            "│                                                                                                  │",
             "│                                                                                                  │",
             "│                                                                                                  │",
             "│                                                                                                  │",
@@ -418,8 +415,12 @@ mod tests {
         // send an event to fetch more events
         let join = tokio::spawn(async move {
             if let Some(event) = rx.recv().await {
-                let expected =
-                    LogEventEvent::FetchLogEvents(log_group_name.clone(), Some(next_token.clone()));
+                let expected = LogEventEvent::FetchLogEvents(
+                    log_group_name.clone(),
+                    Some(next_token.clone()),
+                    Some(SearchState::default()),
+                    false,
+                );
                 assert_eq!(expected, event);
             }
         });

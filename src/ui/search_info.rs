@@ -1,27 +1,15 @@
-use std::{
-    marker::PhantomData,
-    sync::{Arc, Mutex},
-};
+use std::marker::PhantomData;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Local, TimeZone};
-use crossterm::event::{KeyCode, KeyEvent};
-use tokio::sync::mpsc;
+use crossterm::event::KeyEvent;
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Rect},
-    style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Paragraph, Row, Table, TableState, Wrap},
+    layout::{Alignment, Rect},
+    widgets::{Block, Borders, Paragraph, Wrap},
     Frame,
 };
 
-use crate::{
-    constant,
-    event::LogEventEvent,
-    loader::Loader,
-    state::{logevents_state::LogEventsState, search_state::*},
-    ui::Drawable,
-};
+use crate::{state::search_state::*, ui::Drawable};
 
 pub struct SearchInfo<B>
 where
@@ -85,7 +73,7 @@ where
         f.render_widget(paragraph, area);
     }
 
-    async fn handle_event(&mut self, event: KeyEvent) -> bool {
+    async fn handle_event(&mut self, _event: KeyEvent) -> bool {
         false
     }
 }

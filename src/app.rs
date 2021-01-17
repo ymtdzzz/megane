@@ -395,7 +395,11 @@ mod tests {
         for y in 0..10 {
             for x in 0..100 {
                 let ch = expected.get_mut(x, y);
-                if y == 0 || y == 7 {
+                if y == 0 {
+                    if x < side_menu_length {
+                        ch.set_fg(side_menu_color);
+                    }
+                } else if y == 7 {
                     if x >= side_menu_length {
                         if ch.symbol != " " {
                             ch.set_fg(event_area_color);
@@ -403,7 +407,7 @@ mod tests {
                     } else {
                         ch.set_fg(side_menu_color);
                     }
-                } else if y == 1 {
+                } else if y == 2 {
                     if ch.symbol == "│" {
                         if x >= side_menu_length {
                             ch.set_fg(event_area_color);
@@ -475,9 +479,9 @@ mod tests {
         test_case(&mut app, Color::Yellow, Color::White, vec![], 30, false);
         app.event_areas.push(EventArea::default());
         let lines = vec![
-            "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
+            "┌Log Groups [type to search]─┐query: [], mode: [Tail]                                               ",
+            "│                            │┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││   Timestamp     Event                                              │",
-            "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -490,9 +494,9 @@ mod tests {
         // folding side menu
         app.toggle_side_fold();
         let lines = vec![
-            "┌L┐┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
+            "┌L┐query: [], mode: [Tail]                                                                          ",
+            "│ │┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
             "│ ││   Timestamp           Event                                                                   │",
-            "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
@@ -506,9 +510,9 @@ mod tests {
         app.toggle_side_fold();
         app.select_state = SelectState::EventAreas(0);
         let lines = vec![
-            "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
+            "┌Log Groups [type to search]─┐query: [], mode: [Tail]                                               ",
+            "│                            │┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││   Timestamp     Event                                              │",
-            "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",

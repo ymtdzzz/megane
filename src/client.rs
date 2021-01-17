@@ -1,5 +1,4 @@
 use anyhow::Result;
-use log::*;
 use rusoto_logs::{
     CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, FilterLogEventsRequest,
     FilteredLogEvent, LogGroup,

@@ -5,7 +5,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
 use crossterm::event::{KeyCode, KeyEvent};
 use lazy_static::lazy_static;
 use tokio::sync::mpsc;
@@ -267,15 +267,22 @@ where
         let from = if self.term_from.get_input().is_empty() {
             None
         } else {
+            let naive = NaiveDateTime::parse_from_str(&self.term_from.get_input(), &fmt)?;
+            let local = Local.from_local_datetime(&naive).unwrap();
+            let utc: DateTime<Utc> = DateTime::from(local);
             Some(
-                NaiveDateTime::parse_from_str(&self.term_from.get_input(), &fmt)?
-                    .timestamp_millis(),
+                utc.timestamp_millis(),
             )
         };
         let to = if self.term_to.get_input().is_empty() {
             None
         } else {
-            Some(NaiveDateTime::parse_from_str(&self.term_to.get_input(), &fmt)?.timestamp_millis())
+            let naive = NaiveDateTime::parse_from_str(&self.term_to.get_input(), &fmt)?;
+            let local = Local.from_local_datetime(&naive).unwrap();
+            let utc: DateTime<Utc> = DateTime::from(local);
+            Some(
+                utc.timestamp_millis(),
+            )
         };
         Ok((from, to))
     }

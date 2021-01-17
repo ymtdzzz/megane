@@ -19,7 +19,7 @@ use crate::{
     constant,
     event::LogEventEvent,
     loader::Loader,
-    state::logevents_state::LogEventsState,
+    state::{logevents_state::LogEventsState, search_state::SearchState},
     ui::{search_condition_dialog::SearchConditionDialog, search_info::SearchInfo, Drawable},
 };
 
@@ -59,7 +59,7 @@ where
             is_selected: false,
             loader: Loader::new(constant::LOADER.clone()),
             search_info: SearchInfo::default(),
-            search_condition_dialog: SearchConditionDialog::default(),
+            search_condition_dialog: SearchConditionDialog::new(SearchState::default()),
             selection: Selection::Events,
             _phantom: PhantomData,
         }
@@ -188,7 +188,9 @@ where
             let mut next_token = None;
             let mut need_more_fetching = false;
             if let Selection::Search = self.selection {
-                self.search_condition_dialog.handle_event(event).await;
+                if self.search_condition_dialog.handle_event(event).await {
+                    return true;
+                }
             }
             {
                 let mut state = self.state.lock();

@@ -22,7 +22,7 @@ use crate::{
     event::LogEventEvent,
     loader::Loader,
     state::{logevents_state::LogEventsState, search_state::*},
-    ui::Drawable,
+    ui::{textbox::TextBox, Drawable},
     utils::get_inner_area,
 };
 
@@ -89,6 +89,12 @@ impl Radios {
     }
 
     fn select(&mut self, mode: &SearchMode) {
+        self.tail.deselect();
+        self.one_minute.deselect();
+        self.thirty_minutes.deselect();
+        self.one_hour.deselect();
+        self.twelve_hourse.deselect();
+        self.custom.deselect();
         match mode {
             SearchMode::Tail => {
                 self.tail.select();
@@ -142,6 +148,7 @@ where
     focus: usize,
     state: SearchState,
     radios: Radios,
+    query_input: TextBox<B>,
     _phantom: PhantomData<B>,
 }
 
@@ -154,12 +161,15 @@ where
             focus: 0,
             state,
             radios: Radios::new(),
+            query_input: TextBox::new(true),
             _phantom: PhantomData,
         }
     }
 
     pub fn get_state(&self) -> SearchState {
-        self.state.clone()
+        let mut s = self.state.clone();
+        s.query = self.query_input.get_input();
+        s
     }
 
     fn next(&mut self) {
@@ -167,10 +177,32 @@ where
         if self.focus < max_idx - 1 {
             self.focus = self.focus.saturating_add(1);
         }
+        self.update_query_input_state();
     }
 
     fn previous(&mut self) {
         self.focus = self.focus.saturating_sub(1);
+        self.update_query_input_state();
+    }
+
+    fn update_query_input_state(&mut self) {
+        if self.focus != 0 {
+            self.query_input.deselect();
+        } else {
+            self.query_input.select();
+        }
+    }
+
+    fn select(&mut self) {
+        if self.focus == 0 {
+            return;
+        }
+        let list = MODE_LIST.clone();
+        let mode = list.get(self.focus.saturating_sub(1));
+        if let Some(m) = mode {
+            self.radios.select(m);
+            self.state.mode = m.clone();
+        }
     }
 }
 
@@ -183,6 +215,7 @@ where
             focus: 0,
             state: SearchState::default(),
             radios: Radios::new(),
+            query_input: TextBox::default(),
             _phantom: PhantomData,
         }
     }
@@ -246,7 +279,8 @@ where
 
         f.render_widget(outer_block, outer_area);
         f.render_widget(query_title, chunks[0]);
-        f.render_widget(query, chunks[1]);
+        //f.render_widget(query, chunks[1]);
+        self.query_input.draw(f, chunks[1]);
         f.render_widget(term_title, chunks[2]);
         MODE_LIST.clone().iter().enumerate().for_each(|(i, v)| {
             let radio = Paragraph::new(self.radios.get_radio(&v)).block(Block::default().style(
@@ -261,15 +295,22 @@ where
     }
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
-        match event.code {
-            KeyCode::Down => {
-                self.next();
+        if !self.query_input.handle_event(event).await {
+            match event.code {
+                KeyCode::Down => {
+                    self.next();
+                }
+                KeyCode::Up => {
+                    self.previous();
+                }
+                KeyCode::Char(' ') => {
+                    self.select();
+                }
+                _ => {}
             }
-            KeyCode::Up => {
-                self.previous();
-            }
-            _ => {}
+            false
+        } else {
+            true
         }
-        false
     }
 }

@@ -49,6 +49,14 @@ where
     pub fn set_state(&mut self, new_state: SearchState) {
         self.state = new_state;
     }
+
+    pub fn get_state(&self) -> SearchState {
+        self.state.clone()
+    }
+
+    pub fn is_same_state(&self, other_state: &SearchState) -> bool {
+        &self.state == other_state
+    }
 }
 
 impl<B> Default for SearchInfo<B>

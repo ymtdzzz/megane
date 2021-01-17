@@ -6,6 +6,7 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use log::*;
 use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
@@ -187,6 +188,7 @@ where
         if self.is_selected {
             let mut next_token = None;
             let mut need_more_fetching = false;
+            let mut change_search_condition = false;
             if let Selection::Search = self.selection {
                 if self.search_condition_dialog.handle_event(event).await {
                     return true;
@@ -203,6 +205,7 @@ where
                         KeyCode::Enter => {
                             match self.search_condition_dialog.get_state() {
                                 Ok(s) => {
+                                    change_search_condition = !self.search_info.is_same_state(&s);
                                     self.search_info.set_state(s);
                                 }
                                 Err(e) => {
@@ -220,7 +223,7 @@ where
                             'j' => {
                                 if let Ok(s) = state.as_mut() {
                                     s.next();
-                                    if s.need_more_fetching() {
+                                    if !s.is_fetching && s.need_more_fetching() {
                                         next_token = s.next_token.clone();
                                         need_more_fetching = true;
                                     }
@@ -241,12 +244,25 @@ where
                     }
                 }
             }
-            if need_more_fetching {
+            let state = self.search_info.get_state();
+            if change_search_condition {
                 let _ = self
                     .logevent_inst_tx
                     .send(LogEventEvent::FetchLogEvents(
                         self.log_group_name.clone(),
                         next_token,
+                        Some(state),
+                        true,
+                    ))
+                    .await;
+            } else if need_more_fetching {
+                let _ = self
+                    .logevent_inst_tx
+                    .send(LogEventEvent::FetchLogEvents(
+                        self.log_group_name.clone(),
+                        next_token,
+                        Some(state),
+                        false,
                     ))
                     .await;
             }

@@ -61,8 +61,10 @@ impl LogEventsState {
     }
 
     pub fn need_more_fetching(&self) -> bool {
-        if let Some(s) = self.state.selected() {
-            return self.events.has_items() && s == self.events.items().len() + 1;
+        if self.next_token.is_some() {
+            if let Some(s) = self.state.selected() {
+                return self.events.has_items() && s == self.events.items().len() + 1;
+            }
         }
         false
     }

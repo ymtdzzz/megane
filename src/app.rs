@@ -341,7 +341,12 @@ where
                                 mpsc::Sender::clone(&self.logevent_inst_txs[idx]),
                             ));
                             let _ = self.logevent_inst_txs[idx]
-                                .send(LogEventEvent::FetchLogEvents(i.to_string(), None))
+                                .send(LogEventEvent::FetchLogEvents(
+                                    i.to_string(),
+                                    None,
+                                    None,
+                                    true,
+                                ))
                                 .await;
                         }
                     }

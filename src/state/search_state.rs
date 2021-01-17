@@ -1,8 +1,8 @@
 use std::fmt::{Display, Formatter, Result};
 
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SearchMode {
     Tail,
     OneMinute,
@@ -10,6 +10,31 @@ pub enum SearchMode {
     OneHour,
     TwelveHours,
     FromTo(Option<i64>, Option<i64>),
+}
+
+impl SearchMode {
+    pub fn get_timestamps(&self) -> anyhow::Result<(Option<i64>, Option<i64>)> {
+        match self {
+            SearchMode::Tail => Ok((None, None)),
+            SearchMode::OneMinute => {
+                let from = Utc::now() - Duration::minutes(1);
+                Ok((Some(from.timestamp_millis()), None))
+            }
+            SearchMode::ThirtyMinutes => {
+                let from = Utc::now() - Duration::minutes(30);
+                Ok((Some(from.timestamp_millis()), None))
+            }
+            SearchMode::OneHour => {
+                let from = Utc::now() - Duration::hours(1);
+                Ok((Some(from.timestamp_millis()), None))
+            }
+            SearchMode::TwelveHours => {
+                let from = Utc::now() - Duration::hours(12);
+                Ok((Some(from.timestamp_millis()), None))
+            }
+            SearchMode::FromTo(from, to) => Ok((*from, *to)),
+        }
+    }
 }
 
 impl Display for SearchMode {
@@ -47,7 +72,7 @@ impl Display for SearchMode {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SearchState {
     pub query: String,
     pub mode: SearchMode,

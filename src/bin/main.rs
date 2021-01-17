@@ -9,6 +9,12 @@ use std::{
 
 use anyhow::Result;
 use clap::{crate_authors, crate_description, crate_name, crate_version, App as ClapApp};
+use log::*;
+use log4rs::{
+    append::file::FileAppender,
+    config::{Appender, Config, Root},
+    encode::pattern::PatternEncoder,
+};
 use rusoto_core::Region;
 use rusoto_logs::CloudWatchLogsClient;
 use tokio::sync::mpsc;
@@ -34,6 +40,15 @@ use megane::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // setup logging
+    let logfile = FileAppender::builder()
+        .encoder(Box::new(PatternEncoder::new("{l} - {m}\n")))
+        .build("log/output.log")?;
+    let config = Config::builder()
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        .build(Root::builder().appender("logfile").build(LevelFilter::Info))?;
+    log4rs::init_config(config)?;
+
     let _clap = ClapApp::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())

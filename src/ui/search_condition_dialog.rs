@@ -256,7 +256,6 @@ where
             } else {
                 constant::NORMAL_STYLE.clone()
             });
-        let query = Paragraph::new("aaaaaa").block(query_block);
 
         // input term
         let radio_areas = Layout::default()
@@ -279,7 +278,6 @@ where
 
         f.render_widget(outer_block, outer_area);
         f.render_widget(query_title, chunks[0]);
-        //f.render_widget(query, chunks[1]);
         self.query_input.draw(f, chunks[1]);
         f.render_widget(term_title, chunks[2]);
         MODE_LIST.clone().iter().enumerate().for_each(|(i, v)| {
@@ -306,11 +304,16 @@ where
                 KeyCode::Char(' ') => {
                     self.select();
                 }
+                // events Enter and Esc will be handled by the parent component
+                KeyCode::Enter => {
+                    return false;
+                }
+                KeyCode::Esc => {
+                    return false;
+                }
                 _ => {}
             }
-            false
-        } else {
-            true
         }
+        true
     }
 }

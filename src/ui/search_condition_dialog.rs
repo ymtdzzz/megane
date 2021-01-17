@@ -5,7 +5,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use chrono::{DateTime, Local, TimeZone};
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use crossterm::event::{KeyCode, KeyEvent};
 use lazy_static::lazy_static;
 use tokio::sync::mpsc;
@@ -36,6 +36,12 @@ lazy_static! {
         SearchMode::FromTo(0, 0),
     ];
     pub static ref MODE_NUM: usize = 6;
+}
+
+enum CustomInputMode {
+    From,
+    To,
+    None,
 }
 
 struct Radio {
@@ -149,6 +155,9 @@ where
     state: SearchState,
     radios: Radios,
     query_input: TextBox<B>,
+    term_mode: CustomInputMode,
+    term_from: TextBox<B>,
+    term_to: TextBox<B>,
     _phantom: PhantomData<B>,
 }
 
@@ -162,14 +171,23 @@ where
             state,
             radios: Radios::new(),
             query_input: TextBox::new(true),
+            term_mode: CustomInputMode::None,
+            term_from: TextBox::new(false),
+            term_to: TextBox::new(false),
             _phantom: PhantomData,
         }
     }
 
-    pub fn get_state(&self) -> SearchState {
+    pub fn get_state(&self) -> anyhow::Result<SearchState> {
         let mut s = self.state.clone();
+        s.mode = if let SearchMode::FromTo(_, _) = s.mode {
+            let (from, to) = self.get_timestamps()?;
+            SearchMode::FromTo(from, to)
+        } else {
+            s.mode
+        };
         s.query = self.query_input.get_input();
-        s
+        Ok(s)
     }
 
     fn next(&mut self) {
@@ -177,19 +195,44 @@ where
         if self.focus < max_idx - 1 {
             self.focus = self.focus.saturating_add(1);
         }
-        self.update_query_input_state();
+        self.update_input_states();
     }
 
     fn previous(&mut self) {
         self.focus = self.focus.saturating_sub(1);
-        self.update_query_input_state();
+        self.update_input_states();
     }
 
-    fn update_query_input_state(&mut self) {
+    fn update_input_states(&mut self) {
+        // query input state
         if self.focus != 0 {
             self.query_input.deselect();
         } else {
             self.query_input.select();
+        }
+        // custom term input state
+        let list = MODE_LIST.clone();
+        let mode = list.get(self.focus.saturating_sub(1));
+        if let Some(m) = mode {
+            if let SearchMode::FromTo(_, _) = m {
+                match self.term_mode {
+                    CustomInputMode::From => {
+                        self.term_from.select();
+                        self.term_to.deselect();
+                    }
+                    CustomInputMode::To => {
+                        self.term_from.deselect();
+                        self.term_to.select();
+                    }
+                    CustomInputMode::None => {
+                        self.term_from.deselect();
+                        self.term_to.deselect();
+                    }
+                }
+            } else {
+                self.term_from.deselect();
+                self.term_to.deselect();
+            }
         }
     }
 
@@ -204,6 +247,27 @@ where
             self.state.mode = m.clone();
         }
     }
+
+    fn toggle_term_mode(&mut self) {
+        match self.term_mode {
+            CustomInputMode::From => {
+                self.term_mode = CustomInputMode::To;
+            }
+            CustomInputMode::To => {
+                self.term_mode = CustomInputMode::None;
+            }
+            CustomInputMode::None => {
+                self.term_mode = CustomInputMode::From;
+            }
+        }
+    }
+
+    fn get_timestamps(&self) -> anyhow::Result<(i64, i64)> {
+        let fmt = constant::DATE_FORMAT.clone();
+        let from = NaiveDateTime::parse_from_str(&self.term_from.get_input(), &fmt)?;
+        let to = NaiveDateTime::parse_from_str(&self.term_to.get_input(), &fmt)?;
+        Ok((from.timestamp_millis(), to.timestamp_millis()))
+    }
 }
 
 impl<B> Default for SearchConditionDialog<B>
@@ -216,6 +280,9 @@ where
             state: SearchState::default(),
             radios: Radios::new(),
             query_input: TextBox::default(),
+            term_mode: CustomInputMode::From,
+            term_from: TextBox::default(),
+            term_to: TextBox::default(),
             _phantom: PhantomData,
         }
     }
@@ -259,6 +326,7 @@ where
 
         // input term
         let radio_areas = Layout::default()
+            .direction(Direction::Vertical)
             .constraints(
                 [
                     Constraint::Length(1),
@@ -267,12 +335,13 @@ where
                     Constraint::Length(1),
                     Constraint::Length(1),
                     Constraint::Length(1),
+                    Constraint::Length(1), // custom term input area
                 ]
                 .as_ref(),
             )
             .split(chunks[3]);
         // check if num of areas for radio buttons is correct
-        assert_eq!(MODE_NUM.clone(), radio_areas.len());
+        assert_eq!(MODE_NUM.clone() + 1, radio_areas.len());
 
         let term_title = Paragraph::new("Term").block(Block::default());
 
@@ -290,10 +359,39 @@ where
             ));
             f.render_widget(radio, radio_areas[i]);
         });
+        // custom term input area
+        let paragraph = Paragraph::new("~")
+            .block(Block::default())
+            .style(constant::NORMAL_STYLE.clone());
+        let custom_input_areas = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(
+                [
+                    Constraint::Percentage(50),
+                    Constraint::Min(1),
+                    Constraint::Percentage(50),
+                ]
+                .as_ref(),
+            )
+            .split(*radio_areas.last().unwrap());
+        // TODO: The way should be exist to fix height without this line
+        let custom_input_areas = custom_input_areas
+            .into_iter()
+            .map(|mut area| {
+                area.height = 3;
+                area
+            })
+            .collect::<Vec<Rect>>();
+        self.term_from.draw(f, custom_input_areas[0]);
+        f.render_widget(paragraph, custom_input_areas[1]);
+        self.term_to.draw(f, custom_input_areas[2]);
     }
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
-        if !self.query_input.handle_event(event).await {
+        if !self.query_input.handle_event(event).await
+            && !self.term_from.handle_event(event).await
+            && !self.term_to.handle_event(event).await
+        {
             match event.code {
                 KeyCode::Down => {
                     self.next();
@@ -303,6 +401,10 @@ where
                 }
                 KeyCode::Char(' ') => {
                     self.select();
+                }
+                KeyCode::Tab => {
+                    self.toggle_term_mode();
+                    self.update_input_states();
                 }
                 // events Enter and Esc will be handled by the parent component
                 KeyCode::Enter => {

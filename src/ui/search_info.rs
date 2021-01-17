@@ -43,10 +43,7 @@ where
     }
 
     fn get_msg(&self) -> String {
-        format!(
-            "query: [{}], mode: [{:?}]",
-            self.state.query, self.state.mode
-        )
+        format!("query: [{}], mode: [{}]", self.state.query, self.state.mode)
     }
 
     pub fn set_state(&mut self, new_state: SearchState) {

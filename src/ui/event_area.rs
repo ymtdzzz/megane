@@ -201,8 +201,14 @@ where
                             self.selection = Selection::Events;
                         }
                         KeyCode::Enter => {
-                            self.search_info
-                                .set_state(self.search_condition_dialog.get_state());
+                            match self.search_condition_dialog.get_state() {
+                                Ok(s) => {
+                                    self.search_info.set_state(s);
+                                }
+                                Err(e) => {
+                                    println!("error: {:?}", e);
+                                }
+                            }
                             self.selection = Selection::Events;
                             // TODO: if search condition changed, reset events and fetch them
                         }

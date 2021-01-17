@@ -9,7 +9,7 @@ pub enum SearchMode {
     ThirtyMinutes,
     OneHour,
     TwelveHours,
-    FromTo(i64, i64),
+    FromTo(Option<i64>, Option<i64>),
 }
 
 impl Display for SearchMode {
@@ -31,8 +31,16 @@ impl Display for SearchMode {
                 write!(f, "12 hours")
             }
             SearchMode::FromTo(from, to) => {
-                let from = NaiveDateTime::from_timestamp(from / 1000, 0);
-                let to = NaiveDateTime::from_timestamp(to / 1000, 0);
+                let from = if let Some(time) = from {
+                    NaiveDateTime::from_timestamp(time / 1000, 0).to_string()
+                } else {
+                    String::default()
+                };
+                let to = if let Some(time) = to {
+                    NaiveDateTime::from_timestamp(time / 1000, 0).to_string()
+                } else {
+                    String::default()
+                };
                 write!(f, "{}~{}", from, to)
             }
         }

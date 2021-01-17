@@ -123,8 +123,10 @@ where
                     self.cursor_next();
                 }
                 KeyCode::Backspace => {
-                    self.input.remove(self.cursor.saturating_sub(1));
-                    self.cursor_previous();
+                    if self.cursor > 0 {
+                        self.input.remove(self.cursor.saturating_sub(1));
+                        self.cursor_previous();
+                    }
                 }
                 _ => {
                     return false;

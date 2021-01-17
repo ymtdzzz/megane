@@ -33,7 +33,7 @@ lazy_static! {
         SearchMode::ThirtyMinutes,
         SearchMode::OneHour,
         SearchMode::TwelveHours,
-        SearchMode::FromTo(0, 0),
+        SearchMode::FromTo(None, None),
     ];
     pub static ref MODE_NUM: usize = 6;
 }
@@ -262,11 +262,22 @@ where
         }
     }
 
-    fn get_timestamps(&self) -> anyhow::Result<(i64, i64)> {
+    fn get_timestamps(&self) -> anyhow::Result<(Option<i64>, Option<i64>)> {
         let fmt = constant::DATE_FORMAT.clone();
-        let from = NaiveDateTime::parse_from_str(&self.term_from.get_input(), &fmt)?;
-        let to = NaiveDateTime::parse_from_str(&self.term_to.get_input(), &fmt)?;
-        Ok((from.timestamp_millis(), to.timestamp_millis()))
+        let from = if self.term_from.get_input().is_empty() {
+            None
+        } else {
+            Some(
+                NaiveDateTime::parse_from_str(&self.term_from.get_input(), &fmt)?
+                    .timestamp_millis(),
+            )
+        };
+        let to = if self.term_to.get_input().is_empty() {
+            None
+        } else {
+            Some(NaiveDateTime::parse_from_str(&self.term_to.get_input(), &fmt)?.timestamp_millis())
+        };
+        Ok((from, to))
     }
 }
 

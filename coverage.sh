@@ -8,7 +8,7 @@ rm -rf target/debug/deps/${PROJ_NAME}-*
 export CARGO_INCREMENTAL=0
 export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -C panic=abort"
 
-rm ./target/debug/deps/*.gcda 2> /dev/null
+rm ./target/debug/deps/*.gcda 2> /dev/null || true
 
 cargo build
 cargo test

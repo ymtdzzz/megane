@@ -55,7 +55,7 @@ impl LogClient {
         };
         if let Some(cond) = condition {
             request.filter_pattern = Some(cond.query);
-            let (from, to) = cond.mode.get_timestamps()?;
+            let (from, to) = cond.mode.get_timestamps();
             request.start_time = from;
             request.end_time = to;
         }

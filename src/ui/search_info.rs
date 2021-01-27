@@ -77,3 +77,22 @@ where
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use tui::backend::TestBackend;
+
+    use super::*;
+    use crate::state::search_state::{SearchMode, SearchState};
+
+    #[test]
+    fn test_set_state() {
+        let mut search_info: SearchInfo<TestBackend> = SearchInfo::default();
+        let query = String::from("this is test query");
+        let mode = SearchMode::ThirtyMinutes;
+        let state = SearchState::new(query.clone(), mode.clone());
+        assert!(!search_info.is_same_state(&state));
+        search_info.set_state(state.clone());
+        assert!(search_info.is_same_state(&state));
+    }
+}

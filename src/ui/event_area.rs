@@ -23,6 +23,7 @@ use crate::{
     ui::{search_condition_dialog::SearchConditionDialog, search_info::SearchInfo, Drawable},
 };
 
+#[derive(Debug, PartialEq)]
 pub enum Selection {
     Events,
     Search,
@@ -212,7 +213,6 @@ where
                                 }
                             }
                             self.selection = Selection::Events;
-                            // TODO: if search condition changed, reset events and fetch them
                         }
                         _ => {}
                     }
@@ -276,6 +276,7 @@ mod tests {
 
     use super::*;
     use crate::logevents::LogEvents;
+    use crate::state::search_state::SearchMode;
     use crate::test_helper::*;
 
     fn test_case(event_area: &mut EventArea<TestBackend>, color: Color, lines: Vec<&str>) {
@@ -375,7 +376,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_event() {
+    async fn test_handle_event_basis() {
         let log_group_name = String::from("test_log_gruop");
         let next_token = String::from("next_token");
         let (tx, mut rx) = mpsc::channel(1);
@@ -439,5 +440,69 @@ mod tests {
                 .await
         );
         assert_eq!(Some(0), event_area.state.lock().unwrap().state.selected());
+    }
+
+    #[tokio::test]
+    async fn test_handle_event_search_dialog() {
+        let log_group_name = String::from("test_log_gruop");
+        let (tx, _) = mpsc::channel(1);
+        let original_search_info = SearchInfo::default();
+        let changed_search_info = SearchInfo::new(SearchState::new(
+            "query changed".to_string(),
+            SearchMode::OneMinute,
+        ));
+        let mut event_area: EventArea<TestBackend> = EventArea {
+            log_group_name: log_group_name.clone(),
+            logevent_inst_tx: tx,
+            is_selected: true,
+            search_info: original_search_info.clone(),
+            ..Default::default()
+        };
+        // show the search dialog up
+        assert_eq!(event_area.selection, Selection::Events);
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL))
+                .await
+        );
+        assert_eq!(event_area.selection, Selection::Search);
+        // Hit Enter, store the search query and close the dialog
+        event_area.search_info = changed_search_info.clone();
+        assert_ne!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
+        assert_eq!(event_area.selection, Selection::Events);
+        // show up again
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL))
+                .await
+        );
+        assert_eq!(event_area.selection, Selection::Search);
+        // Hit Esc, just close the dialog (search query should not be changed)
+        event_area.search_info = changed_search_info.clone();
+        assert_ne!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+                .await
+        );
+        assert_ne!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
     }
 }

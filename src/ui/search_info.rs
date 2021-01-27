@@ -59,6 +59,15 @@ where
     }
 }
 
+impl<B> Clone for SearchInfo<B>
+where
+    B: Backend,
+{
+    fn clone(&self) -> Self {
+        SearchInfo::new(self.get_state())
+    }
+}
+
 #[async_trait]
 impl<B> Drawable<B> for SearchInfo<B>
 where

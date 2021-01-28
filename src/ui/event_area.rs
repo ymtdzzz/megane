@@ -5,20 +5,29 @@ use std::{
 
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
-    layout::{Constraint, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Row, Table, TableState},
     Frame,
 };
 
 use crate::{
-    constant, event::LogEventEvent, loader::Loader, state::logevents_state::LogEventsState,
-    ui::Drawable,
+    constant,
+    event::LogEventEvent,
+    loader::Loader,
+    state::{logevents_state::LogEventsState, search_state::SearchState},
+    ui::{search_condition_dialog::SearchConditionDialog, search_info::SearchInfo, Drawable},
 };
+
+#[derive(Debug, PartialEq)]
+pub enum Selection {
+    Events,
+    Search,
+}
 
 pub struct EventArea<B>
 where
@@ -29,6 +38,9 @@ where
     logevent_inst_tx: mpsc::Sender<LogEventEvent>,
     is_selected: bool,
     loader: Loader,
+    search_info: SearchInfo<B>,
+    search_condition_dialog: SearchConditionDialog<B>,
+    selection: Selection,
     _phantom: PhantomData<B>,
 }
 
@@ -47,6 +59,9 @@ where
             logevent_inst_tx,
             is_selected: false,
             loader: Loader::new(constant::LOADER.clone()),
+            search_info: SearchInfo::default(),
+            search_condition_dialog: SearchConditionDialog::new(SearchState::default()),
+            selection: Selection::Events,
             _phantom: PhantomData,
         }
     }
@@ -73,6 +88,9 @@ where
             logevent_inst_tx: tx,
             is_selected: false,
             loader: Loader::new(constant::LOADER.clone()),
+            search_info: SearchInfo::default(),
+            search_condition_dialog: SearchConditionDialog::default(),
+            selection: Selection::Events,
             _phantom: PhantomData,
         }
     }
@@ -84,6 +102,10 @@ where
     B: Backend + Send,
 {
     fn draw(&mut self, f: &mut Frame<'_, B>, area: Rect) {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Percentage(100)].as_ref())
+            .split(area);
         let block = Block::default()
             .borders(Borders::ALL)
             .border_style(if self.is_selected {
@@ -136,35 +158,70 @@ where
                 ]));
             }
         }
-        let table = Table::new(rows)
-            .header(
-                Row::new(vec![" ", "Timestamp", "Event"]).style(Style::default().fg(Color::White)),
-            )
-            .block(block)
-            .widths(&[
-                Constraint::Length(2),
-                Constraint::Percentage(20),
-                Constraint::Percentage(80),
-            ])
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .style(Style::default())
-            .column_spacing(1);
+        let table = if let Selection::Events = self.selection {
+            Table::new(rows)
+                .block(block)
+                .header(
+                    Row::new(vec![" ", "Timestamp", "Event"])
+                        .style(Style::default().fg(Color::White)),
+                )
+                .widths(&[
+                    Constraint::Length(2),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(80),
+                ])
+                .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+                .style(Style::default())
+                .column_spacing(1)
+        } else {
+            Table::new(rows).block(block)
+        };
 
-        f.render_stateful_widget(table, area, &mut state);
+        self.search_info.draw(f, chunks[0]);
+        f.render_stateful_widget(table, chunks[1], &mut state);
+        if let Selection::Search = self.selection {
+            self.search_condition_dialog.draw(f, chunks[1]);
+        }
     }
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
         if self.is_selected {
             let mut next_token = None;
             let mut need_more_fetching = false;
+            let mut change_search_condition = false;
+            if let Selection::Search = self.selection {
+                if self.search_condition_dialog.handle_event(event).await {
+                    return true;
+                }
+            }
             {
                 let mut state = self.state.lock();
-                if let KeyCode::Char(c) = event.code {
+                if let Selection::Search = self.selection {
+                    // search condition dialog event handling
+                    match event.code {
+                        KeyCode::Esc => {
+                            self.selection = Selection::Events;
+                        }
+                        KeyCode::Enter => {
+                            match self.search_condition_dialog.get_state() {
+                                Ok(s) => {
+                                    change_search_condition = !self.search_info.is_same_state(&s);
+                                    self.search_info.set_state(s);
+                                }
+                                Err(e) => {
+                                    println!("error: {:?}", e);
+                                }
+                            }
+                            self.selection = Selection::Events;
+                        }
+                        _ => {}
+                    }
+                } else if let KeyCode::Char(c) = event.code {
                     match c {
                         'j' => {
                             if let Ok(s) = state.as_mut() {
                                 s.next();
-                                if s.need_more_fetching() {
+                                if !s.is_fetching && s.need_more_fetching() {
                                     next_token = s.next_token.clone();
                                     need_more_fetching = true;
                                 }
@@ -175,16 +232,34 @@ where
                                 s.previous();
                             }
                         }
+                        's' => {
+                            if let KeyModifiers::CONTROL = event.modifiers {
+                                self.selection = Selection::Search;
+                            }
+                        }
                         _ => {}
                     }
                 }
             }
-            if need_more_fetching {
+            let state = self.search_info.get_state();
+            if change_search_condition {
                 let _ = self
                     .logevent_inst_tx
                     .send(LogEventEvent::FetchLogEvents(
                         self.log_group_name.clone(),
                         next_token,
+                        Some(state),
+                        true,
+                    ))
+                    .await;
+            } else if need_more_fetching {
+                let _ = self
+                    .logevent_inst_tx
+                    .send(LogEventEvent::FetchLogEvents(
+                        self.log_group_name.clone(),
+                        next_token,
+                        Some(state),
+                        false,
                     ))
                     .await;
             }
@@ -201,6 +276,7 @@ mod tests {
 
     use super::*;
     use crate::logevents::LogEvents;
+    use crate::state::search_state::SearchMode;
     use crate::test_helper::*;
 
     fn test_case(event_area: &mut EventArea<TestBackend>, color: Color, lines: Vec<&str>) {
@@ -209,9 +285,9 @@ mod tests {
             lines
         } else {
             vec![
+                "query: [], mode: [Tail]                                                                             ",
                 "┌Events────────────────────────────────────────────────────────────────────────────────────────────┐",
                 "│   Timestamp           Event                                                                      │",
-                "│                                                                                                  │",
                 "│                                                                                                  │",
                 "│                                                                                                  │",
                 "│                                                                                                  │",
@@ -225,9 +301,9 @@ mod tests {
         for y in 0..10 {
             for x in 0..100 {
                 let ch = expected.get_mut(x, y);
-                if y == 0 || y == 9 {
+                if y == 1 || y == 9 {
                     ch.set_fg(color);
-                } else if y == 1 {
+                } else if y == 2 {
                     if ch.symbol != "│" && ch.symbol != " " {
                         ch.set_fg(Color::White);
                     } else if ch.symbol == "│" {
@@ -279,12 +355,12 @@ mod tests {
             dt3.format(format).to_string()
         );
         let lines = vec![
+            "query: [], mode: [Tail]                                                                             ",
             "┌test-log-group────────────────────────────────────────────────────────────────────────────────────┐",
             "│   Timestamp           Event                                                                      │",
             &line1,
             &line2,
             &line3,
-            "│                                                                                                  │",
             "│                                                                                                  │",
             "│                                                                                                  │",
             "│                                                                                                  │",
@@ -300,7 +376,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_event() {
+    async fn test_handle_event_basis() {
         let log_group_name = String::from("test_log_gruop");
         let next_token = String::from("next_token");
         let (tx, mut rx) = mpsc::channel(1);
@@ -340,8 +416,12 @@ mod tests {
         // send an event to fetch more events
         let join = tokio::spawn(async move {
             if let Some(event) = rx.recv().await {
-                let expected =
-                    LogEventEvent::FetchLogEvents(log_group_name.clone(), Some(next_token.clone()));
+                let expected = LogEventEvent::FetchLogEvents(
+                    log_group_name.clone(),
+                    Some(next_token.clone()),
+                    Some(SearchState::default()),
+                    false,
+                );
                 assert_eq!(expected, event);
             }
         });
@@ -360,5 +440,69 @@ mod tests {
                 .await
         );
         assert_eq!(Some(0), event_area.state.lock().unwrap().state.selected());
+    }
+
+    #[tokio::test]
+    async fn test_handle_event_search_dialog() {
+        let log_group_name = String::from("test_log_gruop");
+        let (tx, _) = mpsc::channel(1);
+        let original_search_info = SearchInfo::default();
+        let changed_search_info = SearchInfo::new(SearchState::new(
+            "query changed".to_string(),
+            SearchMode::OneMinute,
+        ));
+        let mut event_area: EventArea<TestBackend> = EventArea {
+            log_group_name: log_group_name.clone(),
+            logevent_inst_tx: tx,
+            is_selected: true,
+            search_info: original_search_info.clone(),
+            ..Default::default()
+        };
+        // show the search dialog up
+        assert_eq!(event_area.selection, Selection::Events);
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL))
+                .await
+        );
+        assert_eq!(event_area.selection, Selection::Search);
+        // Hit Enter, store the search query and close the dialog
+        event_area.search_info = changed_search_info.clone();
+        assert_ne!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
+        assert_eq!(event_area.selection, Selection::Events);
+        // show up again
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL))
+                .await
+        );
+        assert_eq!(event_area.selection, Selection::Search);
+        // Hit Esc, just close the dialog (search query should not be changed)
+        event_area.search_info = changed_search_info.clone();
+        assert_ne!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+                .await
+        );
+        assert_ne!(
+            original_search_info.get_state(),
+            event_area.search_info.get_state()
+        );
     }
 }

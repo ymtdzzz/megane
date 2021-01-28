@@ -4,6 +4,8 @@ use rusoto_logs::{
     FilteredLogEvent, LogGroup,
 };
 
+use crate::state::search_state::SearchState;
+
 /// rusoto wrapper
 #[derive(Clone)]
 pub struct LogClient {
@@ -43,13 +45,20 @@ impl LogClient {
         &self,
         log_group_name: &str,
         next_token: Option<String>,
+        condition: Option<SearchState>,
     ) -> Result<(Vec<FilteredLogEvent>, Option<String>)> {
-        let request = FilterLogEventsRequest {
+        let mut request = FilterLogEventsRequest {
             log_group_name: log_group_name.to_string(),
-            limit: Some(10),
+            limit: Some(100),
             next_token,
             ..Default::default()
         };
+        if let Some(cond) = condition {
+            request.filter_pattern = Some(cond.query);
+            let (from, to) = cond.mode.get_timestamps();
+            request.start_time = from;
+            request.end_time = to;
+        }
         let response = self.client.filter_log_events(request).await?;
         let events = if let Some(i) = response.events {
             i
@@ -78,7 +87,10 @@ mod tests {
     async fn test_fetch_logs() {
         let mock_client = get_mock_client("logevents_01.json");
         let client = LogClient::new(mock_client);
-        let (result, next_token) = client.fetch_logs("test-log-group", None).await.unwrap();
+        let (result, next_token) = client
+            .fetch_logs("test-log-group", None, None)
+            .await
+            .unwrap();
         let expect = make_log_events(1, 5, 1609426800000);
         assert!(next_token.is_some());
         assert_eq!(expect, result);

@@ -16,6 +16,7 @@ use crate::{
 };
 
 /// which component selected
+#[derive(PartialEq, Debug)]
 pub enum SelectState {
     SideMenu,
     EventAreas(usize),
@@ -341,7 +342,12 @@ where
                                 mpsc::Sender::clone(&self.logevent_inst_txs[idx]),
                             ));
                             let _ = self.logevent_inst_txs[idx]
-                                .send(LogEventEvent::FetchLogEvents(i.to_string(), None))
+                                .send(LogEventEvent::FetchLogEvents(
+                                    i.to_string(),
+                                    None,
+                                    None,
+                                    true,
+                                ))
                                 .await;
                         }
                     }
@@ -359,7 +365,7 @@ mod tests {
     use tui::{backend::TestBackend, buffer::Buffer, layout::Rect, style::Color};
 
     use super::*;
-    use crate::test_helper::get_test_terminal;
+    use crate::{loggroups::LogGroups, state::loggroups_state::LogGroupsState, test_helper::*};
 
     fn test_case(
         app: &mut App<TestBackend>,
@@ -390,7 +396,11 @@ mod tests {
         for y in 0..10 {
             for x in 0..100 {
                 let ch = expected.get_mut(x, y);
-                if y == 0 || y == 7 {
+                if y == 0 {
+                    if x < side_menu_length {
+                        ch.set_fg(side_menu_color);
+                    }
+                } else if y == 7 {
                     if x >= side_menu_length {
                         if ch.symbol != " " {
                             ch.set_fg(event_area_color);
@@ -398,7 +408,7 @@ mod tests {
                     } else {
                         ch.set_fg(side_menu_color);
                     }
-                } else if y == 1 {
+                } else if y == 2 {
                     if ch.symbol == "│" {
                         if x >= side_menu_length {
                             ch.set_fg(event_area_color);
@@ -470,9 +480,9 @@ mod tests {
         test_case(&mut app, Color::Yellow, Color::White, vec![], 30, false);
         app.event_areas.push(EventArea::default());
         let lines = vec![
-            "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
+            "┌Log Groups [type to search]─┐query: [], mode: [Tail]                                               ",
+            "│                            │┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││   Timestamp     Event                                              │",
-            "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -485,9 +495,9 @@ mod tests {
         // folding side menu
         app.toggle_side_fold();
         let lines = vec![
-            "┌L┐┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
+            "┌L┐query: [], mode: [Tail]                                                                          ",
+            "│ │┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
             "│ ││   Timestamp           Event                                                                   │",
-            "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
@@ -501,9 +511,9 @@ mod tests {
         app.toggle_side_fold();
         app.select_state = SelectState::EventAreas(0);
         let lines = vec![
-            "┌Log Groups [type to search]─┐┌Events──────────────────────────────────────────────────────────────┐",
+            "┌Log Groups [type to search]─┐query: [], mode: [Tail]                                               ",
+            "│                            │┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││   Timestamp     Event                                              │",
-            "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
@@ -556,16 +566,120 @@ mod tests {
                 .await
         );
         assert!(app.show_help);
+        app.event_areas.push(EventArea::default());
+        app.select_state = SelectState::SideMenu;
+        assert!(
+            app.handle_event(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(SelectState::EventAreas(0), app.select_state);
     }
 
     #[tokio::test]
-    async fn test_handler_event_update_eventarea() {
-        let mut app: App<TestBackend> = App::default();
-        app.event_areas.push(EventArea::default());
-        app.event_areas.push(EventArea::default());
+    async fn test_handler_event_update_eventareas() {
+        // setup
+        let loggroup_state = Arc::new(Mutex::new(LogGroupsState::new()));
+        let mut app: App<TestBackend> = App {
+            side_menu: SideMenu::new(Arc::clone(&loggroup_state)),
+            ..Default::default()
+        };
+        // 3 log groups
+        {
+            let mut m_guard = loggroup_state.lock().unwrap();
+            m_guard.log_groups = LogGroups::new(get_log_groups(0, 2, false));
+            m_guard.get_list_items("", &[]);
+        }
+        // current cursor is the first log group
+        app.select_state = SelectState::SideMenu;
+        app.side_menu.set_select(true);
+        app.side_menu
+            .handle_event(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+            .await;
+
+        // check the curernt state
+        assert_eq!(0, app.event_areas.len());
+        assert_eq!([true, true, true, true], app.free_idx);
+        // fire the Enter event
         assert!(
             app.handle_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
                 .await
         );
+        assert_eq!(1, app.event_areas.len());
+        assert_eq!([false, true, true, true], app.free_idx);
+    }
+
+    #[test]
+    fn test_rotate_state() {
+        let mut app: App<TestBackend> = App::default();
+        app.event_areas.push(EventArea::default());
+        app.event_areas.push(EventArea::default());
+        app.event_areas.push(EventArea::default());
+        app.event_areas.push(EventArea::default());
+        // KeyCode::Left
+        // EventArea(left-top) -> SideMenu
+        app.select_state = SelectState::EventAreas(0);
+        app.rotate_select_state(KeyCode::Left);
+        assert_eq!(SelectState::SideMenu, app.select_state);
+        // EventArea(right-top) -> EventArea(left-top)
+        app.select_state = SelectState::EventAreas(1);
+        app.rotate_select_state(KeyCode::Left);
+        assert_eq!(SelectState::EventAreas(0), app.select_state);
+        // EventArea(left-bottom) -> SideMenu
+        app.select_state = SelectState::EventAreas(2);
+        app.rotate_select_state(KeyCode::Left);
+        assert_eq!(SelectState::SideMenu, app.select_state);
+        // EventArea(right-bottom) -> EventArea(left-bottom)
+        app.select_state = SelectState::EventAreas(3);
+        app.rotate_select_state(KeyCode::Left);
+        assert_eq!(SelectState::EventAreas(2), app.select_state);
+        // KeyCode::Right
+        // SideMenu -> EventArea(left-top)
+        app.select_state = SelectState::SideMenu;
+        app.rotate_select_state(KeyCode::Right);
+        assert_eq!(SelectState::EventAreas(0), app.select_state);
+        // EventArea(left-top) -> EventArea(right-top)
+        app.select_state = SelectState::EventAreas(0);
+        app.rotate_select_state(KeyCode::Right);
+        assert_eq!(SelectState::EventAreas(1), app.select_state);
+        // EventArea(right-top) -> no change
+        app.select_state = SelectState::EventAreas(1);
+        app.rotate_select_state(KeyCode::Right);
+        assert_eq!(SelectState::EventAreas(1), app.select_state);
+        // EventArea(left-bottom) -> EventArea(right-bottom)
+        app.select_state = SelectState::EventAreas(2);
+        app.rotate_select_state(KeyCode::Right);
+        assert_eq!(SelectState::EventAreas(3), app.select_state);
+        // EventArea(right-bottom) -> no change
+        app.select_state = SelectState::EventAreas(3);
+        app.rotate_select_state(KeyCode::Right);
+        assert_eq!(SelectState::EventAreas(3), app.select_state);
+        // KeyCode::Down
+        // EventArea(left-top) -> EventArea(left-bottom)
+        app.select_state = SelectState::EventAreas(0);
+        app.rotate_select_state(KeyCode::Down);
+        assert_eq!(SelectState::EventAreas(2), app.select_state);
+        // EventArea(right-top) -> EventArea(right-bottom)
+        app.select_state = SelectState::EventAreas(1);
+        app.rotate_select_state(KeyCode::Down);
+        assert_eq!(SelectState::EventAreas(3), app.select_state);
+        // KeyCode::Up
+        // EventArea(left-bottom) -> EventArea(left-top)
+        app.select_state = SelectState::EventAreas(2);
+        app.rotate_select_state(KeyCode::Up);
+        assert_eq!(SelectState::EventAreas(0), app.select_state);
+        // EventArea(right-bottom) -> EventArea(right-top)
+        app.select_state = SelectState::EventAreas(3);
+        app.rotate_select_state(KeyCode::Up);
+        assert_eq!(SelectState::EventAreas(1), app.select_state);
+    }
+
+    #[test]
+    fn test_get_next_idx() {
+        let mut app: App<TestBackend> = App::default();
+        app.free_idx = [false, true, false, true];
+        let result = app.get_next_idx().unwrap();
+        assert_eq!(1, result);
+        app.free_idx = [false, false, false, false];
+        assert!(app.get_next_idx().is_err());
     }
 }

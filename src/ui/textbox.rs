@@ -123,3 +123,134 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use tui::{backend::TestBackend, buffer::Buffer, style::Color};
+
+    use super::*;
+    use crate::test_helper::get_test_terminal;
+
+    fn test_case(textbox: &mut TextBox<TestBackend>, expected: Buffer) {
+        let mut terminal = get_test_terminal(20, 3);
+        terminal
+            .draw(|f| {
+                textbox.draw(f, f.size());
+            })
+            .unwrap();
+        terminal.backend().assert_buffer(&expected);
+    }
+
+    #[test]
+    fn test_draw() {
+        let mut textbox: TextBox<TestBackend> = TextBox::new(false);
+        let lines = vec![
+            "┌──────────────────┐",
+            "│|input            │",
+            "└──────────────────┘",
+        ];
+        textbox.input = "input".to_string();
+        let mut expected = Buffer::with_lines(lines.clone());
+        // not selected
+        for y in 0..3 {
+            for x in 0..20 {
+                let ch = expected.get_mut(x, y);
+                ch.set_fg(Color::White);
+            }
+        }
+        test_case(&mut textbox, expected);
+        // selected
+        let mut expected = Buffer::with_lines(lines.clone());
+        textbox.is_selected = true;
+        for y in 0..3 {
+            for x in 0..20 {
+                let ch = expected.get_mut(x, y);
+                ch.set_fg(Color::Yellow);
+            }
+        }
+        test_case(&mut textbox, expected);
+        // overflow check
+        textbox.cursor_previous();
+        let mut expected = Buffer::with_lines(lines.clone());
+        for y in 0..3 {
+            for x in 0..20 {
+                let ch = expected.get_mut(x, y);
+                ch.set_fg(Color::Yellow);
+            }
+        }
+        test_case(&mut textbox, expected);
+        let lines = vec![
+            "┌──────────────────┐",
+            "│input|            │",
+            "└──────────────────┘",
+        ];
+        textbox.cursor = 5;
+        textbox.cursor_next();
+        let mut expected = Buffer::with_lines(lines.clone());
+        for y in 0..3 {
+            for x in 0..20 {
+                let ch = expected.get_mut(x, y);
+                ch.set_fg(Color::Yellow);
+            }
+        }
+        test_case(&mut textbox, expected);
+        // cursor previous
+        let lines = vec![
+            "┌──────────────────┐",
+            "│inpu|t            │",
+            "└──────────────────┘",
+        ];
+        textbox.cursor_previous();
+        let mut expected = Buffer::with_lines(lines.clone());
+        for y in 0..3 {
+            for x in 0..20 {
+                let ch = expected.get_mut(x, y);
+                ch.set_fg(Color::Yellow);
+            }
+        }
+        test_case(&mut textbox, expected);
+        // cursor next
+        let lines = vec![
+            "┌──────────────────┐",
+            "│input|            │",
+            "└──────────────────┘",
+        ];
+        textbox.cursor_next();
+        let mut expected = Buffer::with_lines(lines.clone());
+        for y in 0..3 {
+            for x in 0..20 {
+                let ch = expected.get_mut(x, y);
+                ch.set_fg(Color::Yellow);
+            }
+        }
+        test_case(&mut textbox, expected);
+    }
+
+    #[tokio::test]
+    async fn test_handle_event() {
+        let mut textbox: TextBox<TestBackend> = TextBox::new(true);
+        textbox.input = "input".to_string();
+        assert_eq!(0, textbox.cursor);
+        assert!(
+            textbox
+                .handle_event(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(1, textbox.cursor);
+        assert!(
+            textbox
+                .handle_event(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(0, textbox.cursor);
+        textbox.cursor = 4;
+        assert!(
+            textbox
+                .handle_event(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!("inpt".to_string(), textbox.get_input());
+        assert_eq!(3, textbox.cursor);
+    }
+}

@@ -33,12 +33,14 @@ lazy_static! {
     pub static ref MODE_NUM: usize = 6;
 }
 
+#[derive(Debug, PartialEq)]
 enum CustomInputMode {
     From,
     To,
     None,
 }
 
+#[derive(Debug, PartialEq)]
 struct Radio {
     is_selected: bool,
     label: String,
@@ -240,6 +242,7 @@ where
         if let Some(m) = mode {
             self.radios.select(m);
             self.state.mode = m.clone();
+            println!("{:?}", m);
         }
     }
 
@@ -419,5 +422,360 @@ where
             }
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use tui::{backend::TestBackend, buffer::Buffer, style::Color};
+
+    use super::*;
+    use crate::test_helper::get_test_terminal;
+
+    #[test]
+    fn test_radio_select() {
+        let mut radio = Radio::new("test_radio", false);
+        assert!(!radio.is_selected);
+        radio.select();
+        assert!(radio.is_selected);
+        radio.deselect();
+        assert!(!radio.is_selected);
+    }
+
+    #[test]
+    fn test_radio_fmt() {
+        let radio_1 = Radio::new("radio_1", false);
+        let radio_2 = Radio::new("radio_2", true);
+        assert_eq!(String::from("[ ] radio_1"), radio_1.to_string());
+        assert_eq!(String::from("[*] radio_2"), radio_2.to_string());
+    }
+
+    #[test]
+    fn test_radios_select() {
+        let mut radios = Radios::new();
+        // initial state check
+        assert!(radios.tail.is_selected);
+        assert!(!radios.one_minute.is_selected);
+        assert!(!radios.thirty_minutes.is_selected);
+        assert!(!radios.one_hour.is_selected);
+        assert!(!radios.twelve_hourse.is_selected);
+        assert!(!radios.custom.is_selected);
+        // select
+        radios.select(&SearchMode::OneMinute);
+        assert!(!radios.tail.is_selected);
+        assert!(radios.one_minute.is_selected);
+        assert!(!radios.thirty_minutes.is_selected);
+        assert!(!radios.one_hour.is_selected);
+        assert!(!radios.twelve_hourse.is_selected);
+        assert!(!radios.custom.is_selected);
+        radios.select(&SearchMode::ThirtyMinutes);
+        assert!(!radios.tail.is_selected);
+        assert!(!radios.one_minute.is_selected);
+        assert!(radios.thirty_minutes.is_selected);
+        assert!(!radios.one_hour.is_selected);
+        assert!(!radios.twelve_hourse.is_selected);
+        assert!(!radios.custom.is_selected);
+        radios.select(&SearchMode::OneHour);
+        assert!(!radios.tail.is_selected);
+        assert!(!radios.one_minute.is_selected);
+        assert!(!radios.thirty_minutes.is_selected);
+        assert!(radios.one_hour.is_selected);
+        assert!(!radios.twelve_hourse.is_selected);
+        assert!(!radios.custom.is_selected);
+        radios.select(&SearchMode::TwelveHours);
+        assert!(!radios.tail.is_selected);
+        assert!(!radios.one_minute.is_selected);
+        assert!(!radios.thirty_minutes.is_selected);
+        assert!(!radios.one_hour.is_selected);
+        assert!(radios.twelve_hourse.is_selected);
+        assert!(!radios.custom.is_selected);
+        radios.select(&SearchMode::FromTo(None, None));
+        assert!(!radios.tail.is_selected);
+        assert!(!radios.one_minute.is_selected);
+        assert!(!radios.thirty_minutes.is_selected);
+        assert!(!radios.one_hour.is_selected);
+        assert!(!radios.twelve_hourse.is_selected);
+        assert!(radios.custom.is_selected);
+        radios.select(&SearchMode::Tail);
+        assert!(radios.tail.is_selected);
+        assert!(!radios.one_minute.is_selected);
+        assert!(!radios.thirty_minutes.is_selected);
+        assert!(!radios.one_hour.is_selected);
+        assert!(!radios.twelve_hourse.is_selected);
+        assert!(!radios.custom.is_selected);
+    }
+
+    #[test]
+    fn test_radios_get_radio() {
+        let radios = Radios::new();
+        assert_eq!("[*] tail".to_string(), radios.get_radio(&SearchMode::Tail));
+        assert_eq!(
+            "[ ] 1 minute".to_string(),
+            radios.get_radio(&SearchMode::OneMinute)
+        );
+        assert_eq!(
+            "[ ] 30 minutes".to_string(),
+            radios.get_radio(&SearchMode::ThirtyMinutes)
+        );
+        assert_eq!(
+            "[ ] 1 hour".to_string(),
+            radios.get_radio(&SearchMode::OneHour)
+        );
+        assert_eq!(
+            "[ ] 12 hours".to_string(),
+            radios.get_radio(&SearchMode::TwelveHours)
+        );
+        assert_eq!(
+            "[ ] custom (from to)".to_string(),
+            radios.get_radio(&SearchMode::FromTo(None, None))
+        );
+    }
+
+    #[test]
+    fn test_dialog_get_state() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        let expected = SearchState::default();
+        assert_eq!(expected, dialog.get_state().unwrap());
+        // custom term
+        let expected = SearchState::new(String::default(), SearchMode::FromTo(None, None));
+        dialog.focus = 6;
+        dialog.select();
+        dialog.radios.select(&SearchMode::FromTo(None, None));
+        assert_eq!(expected, dialog.get_state().unwrap());
+    }
+
+    #[test]
+    fn test_dialog_next() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        assert_eq!(0, dialog.focus);
+        dialog.next();
+        assert_eq!(1, dialog.focus);
+        dialog.focus = 6;
+        dialog.next();
+        assert_eq!(6, dialog.focus);
+    }
+
+    #[test]
+    fn test_dialog_previous() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        dialog.focus = 6;
+        dialog.previous();
+        assert_eq!(5, dialog.focus);
+        dialog.focus = 0;
+        dialog.previous();
+        assert_eq!(0, dialog.focus);
+    }
+
+    #[test]
+    fn test_dialog_select() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        let mut expected: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        // no change
+        dialog.select();
+        assert_eq!(expected.focus, dialog.focus);
+        assert_eq!(expected.state, dialog.state);
+        // change mode to ThirtyMinutes and select the correct radio
+        dialog.focus = 3;
+        dialog.select();
+        expected.focus = 3;
+        expected.state.mode = SearchMode::ThirtyMinutes;
+        assert_eq!(expected.focus, dialog.focus);
+        assert_eq!(expected.state, dialog.state);
+        assert!(dialog.radios.thirty_minutes.is_selected);
+    }
+
+    #[test]
+    fn test_dialog_toggle_term_mode() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        dialog.term_mode = CustomInputMode::From;
+        dialog.toggle_term_mode();
+        assert_eq!(CustomInputMode::To, dialog.term_mode);
+        dialog.toggle_term_mode();
+        assert_eq!(CustomInputMode::None, dialog.term_mode);
+        dialog.toggle_term_mode();
+        assert_eq!(CustomInputMode::From, dialog.term_mode);
+    }
+
+    fn test_case(dialog: &mut SearchConditionDialog<TestBackend>, expected: Buffer) {
+        let mut terminal = get_test_terminal(50, 20);
+        terminal
+            .draw(|f| {
+                dialog.draw(f, f.size());
+            })
+            .unwrap();
+        terminal.backend().assert_buffer(&expected);
+    }
+
+    #[test]
+    fn test_dialog_draw() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        let lines = vec![
+            "                                                  ",
+            " ┌Search Condition──────────────────────────────┐ ",
+            " │Query                                         │ ",
+            " │┌────────────────────────────────────────────┐│ ",
+            " ││|                                           ││ ",
+            " │└────────────────────────────────────────────┘│ ",
+            " │Term                                          │ ",
+            " │[*] tail                                      │ ",
+            " │[ ] 1 minute                                  │ ",
+            " │[ ] 30 minutes                                │ ",
+            " │[ ] 1 hour                                    │ ",
+            " │[ ] 12 hours                                  │ ",
+            " │[ ] custom (from to)                          │ ",
+            " │┌─────────────────────┐~┌────────────────────┐│ ",
+            " ││|                    │ │|                   ││ ",
+            " │└─────────────────────┘ └────────────────────┘│ ",
+            " │                                              │ ",
+            " │                                              │ ",
+            " └──────────────────────────────────────────────┘ ",
+            "                                                  ",
+        ];
+        // initial dialog
+        let mut expected = Buffer::with_lines(lines.clone());
+        for y in 0..20 {
+            for x in 0..50 {
+                let ch = expected.get_mut(x, y);
+                if y == 3 || y == 4 || y == 5 {
+                    if x >= 2 && x <= 47 {
+                        ch.set_fg(Color::Yellow);
+                    }
+                } else if y >= 7 && y <= 15 {
+                    if x >= 2 && x <= 47 {
+                        ch.set_fg(Color::White);
+                    }
+                } else {
+                    ch.set_fg(Color::Reset);
+                }
+            }
+        }
+        test_case(&mut dialog, expected);
+        // focus on '1 minute'
+        dialog.next();
+        dialog.next();
+        dialog.next();
+        let mut expected = Buffer::with_lines(lines.clone());
+        for y in 0..20 {
+            for x in 0..50 {
+                let ch = expected.get_mut(x, y);
+                if y == 9 {
+                    if x >= 2 && x <= 47 {
+                        ch.set_fg(Color::Yellow);
+                    }
+                } else if y == 3 || y == 4 || y == 5 {
+                    if x >= 2 && x <= 47 {
+                        ch.set_fg(Color::White);
+                    }
+                } else if y >= 7 && y <= 15 {
+                    if x >= 2 && x <= 47 {
+                        ch.set_fg(Color::White);
+                    }
+                } else {
+                    ch.set_fg(Color::Reset);
+                }
+            }
+        }
+        test_case(&mut dialog, expected);
+    }
+
+    async fn simulate_input(
+        dialog: &mut SearchConditionDialog<TestBackend>,
+        input: &str,
+        is_from: bool,
+    ) {
+        for ch in input.chars().into_iter() {
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE))
+                .await;
+        }
+        if is_from {
+            assert_eq!(input.to_string(), dialog.term_from.get_input());
+        } else {
+            assert_eq!(input.to_string(), dialog.term_to.get_input());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_dialog_handle_event_basis() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        assert_eq!(0, dialog.focus);
+        assert_eq!(
+            SearchState::new("".to_string(), SearchMode::Tail),
+            dialog.state
+        );
+        // Down
+        assert!(
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(1, dialog.focus);
+        // Space
+        assert!(
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+                .await
+        );
+        assert!(
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE))
+                .await
+        );
+        assert!(dialog.radios.one_minute.is_selected);
+        assert_eq!(SearchMode::OneMinute, dialog.state.mode);
+        // Up
+        assert!(
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(1, dialog.focus);
+        // Tab
+        dialog.focus = 6;
+        assert_eq!(CustomInputMode::None, dialog.term_mode);
+        assert!(
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(CustomInputMode::From, dialog.term_mode);
+    }
+
+    #[tokio::test]
+    async fn test_dialog_handle_event_input_custom_term() {
+        let mut dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        dialog.focus = 6;
+        dialog.select();
+        // input from
+        assert!(
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(CustomInputMode::From, dialog.term_mode);
+        simulate_input(&mut dialog, "2021-01-01 00:00:01", true).await;
+        // input to
+        assert!(
+            dialog
+                .handle_event(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(CustomInputMode::To, dialog.term_mode);
+        simulate_input(&mut dialog, "2021-01-10 00:00:01", false).await;
+        // get the timestamps
+        let (from_timestamp, to_timestamp) = dialog.get_timestamps().unwrap();
+        let from = Utc.timestamp(from_timestamp.unwrap() / 1000, 0);
+        let to = Utc.timestamp(to_timestamp.unwrap() / 1000, 0);
+        assert_eq!(chrono::Duration::days(9), to - from);
     }
 }

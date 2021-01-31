@@ -6,6 +6,7 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use lazy_static::lazy_static;
 use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
@@ -22,6 +23,14 @@ use crate::{
     state::{logevents_state::LogEventsState, search_state::SearchState},
     ui::{search_condition_dialog::SearchConditionDialog, search_info::SearchInfo, Drawable},
 };
+
+lazy_static! {
+    static ref TABLE_CONSTRAINT: [Constraint; 3] = [
+        Constraint::Length(2),
+        Constraint::Percentage(20),
+        Constraint::Percentage(80),
+    ];
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Selection {
@@ -117,30 +126,45 @@ where
         let mut rows = vec![];
         let mut state = TableState::default();
         if let Ok(s) = self.state.try_lock() {
+            // get event row width
+            let table_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(TABLE_CONSTRAINT.as_ref())
+                .split(chunks[1]);
+            let width = table_chunks[2].width - 3;
+
             state = s.state.clone();
-            s.events.items().iter().for_each(|item| {
+            let opened_idx_list = s.events.opened_idx();
+            s.events.items().iter().enumerate().for_each(|(idx, item)| {
+                let mut msg = if let Some(msg) = &item.message {
+                    msg.clone()
+                } else {
+                    String::default()
+                };
+                let mut open = false;
+                let (event_msg, row_height) = if opened_idx_list.contains(&idx) {
+                    open = true;
+                    insert_newline(&mut msg, width)
+                } else {
+                    (msg, 1)
+                };
                 rows.push(
                     Row::new(vec![
                         // TODO: "v" when its fold flag is false
-                        ">".to_string(),
+                        if open {
+                            "v".to_string()
+                        } else {
+                            ">".to_string()
+                        },
                         if let Some(time) = item.timestamp {
                             let dt: DateTime<Local> = Local.timestamp(time / 1000, 0);
                             dt.to_string()
                         } else {
                             "".to_string()
                         },
-                        if let Some(msg) = &item.message {
-                            // TODO: insert newline when its fold flag is false
-                            //let m = msg.clone();
-                            // if m.len() > 10 {
-                            //     m.insert_str(10, "\n");
-                            // }
-                            msg.clone()
-                        } else {
-                            "".to_string()
-                        },
+                        event_msg,
                     ])
-                    .height(1),
+                    .height(row_height),
                 );
             });
             if s.is_fetching {
@@ -165,11 +189,7 @@ where
                     Row::new(vec![" ", "Timestamp", "Event"])
                         .style(Style::default().fg(Color::White)),
                 )
-                .widths(&[
-                    Constraint::Length(2),
-                    Constraint::Percentage(20),
-                    Constraint::Percentage(80),
-                ])
+                .widths(TABLE_CONSTRAINT.as_ref())
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD))
                 .style(Style::default())
                 .column_spacing(1)
@@ -216,27 +236,38 @@ where
                         }
                         _ => {}
                     }
-                } else if let KeyCode::Char(c) = event.code {
-                    match c {
-                        'j' => {
-                            if let Ok(s) = state.as_mut() {
-                                s.next();
-                                if !s.is_fetching && s.need_more_fetching() {
-                                    next_token = s.next_token.clone();
-                                    need_more_fetching = true;
+                } else {
+                    match event.code {
+                        KeyCode::Tab => {
+                            if let Ok(mut s) = state {
+                                if let Some(idx) = s.state.selected() {
+                                    s.events.toggle_select(idx);
                                 }
                             }
+                            return true;
                         }
-                        'k' => {
-                            if let Ok(s) = state.as_mut() {
-                                s.previous();
+                        KeyCode::Char(c) => match c {
+                            'j' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.next();
+                                    if !s.is_fetching && s.need_more_fetching() {
+                                        next_token = s.next_token.clone();
+                                        need_more_fetching = true;
+                                    }
+                                }
                             }
-                        }
-                        's' => {
-                            if let KeyModifiers::CONTROL = event.modifiers {
-                                self.selection = Selection::Search;
+                            'k' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.previous();
+                                }
                             }
-                        }
+                            's' => {
+                                if let KeyModifiers::CONTROL = event.modifiers {
+                                    self.selection = Selection::Search;
+                                }
+                            }
+                            _ => {}
+                        },
                         _ => {}
                     }
                 }
@@ -268,10 +299,27 @@ where
     }
 }
 
+// (row, height)
+fn insert_newline(row: &mut String, width: u16) -> (String, u16) {
+    let mut height: u16 = 1;
+    let mut len = row.len() as u16;
+    let mut current_pos = width;
+    if len > width {
+        while current_pos < len {
+            row.insert(current_pos as usize, '\n');
+            len = len.saturating_add(1);
+            current_pos = current_pos.saturating_add(width + 1);
+            height = height.saturating_add(1);
+        }
+    }
+    (row.to_string(), height)
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, Local, TimeZone};
     use crossterm::event::{KeyCode, KeyModifiers};
+    use rusoto_logs::FilteredLogEvent;
     use tui::{backend::TestBackend, buffer::Buffer, style::Color};
 
     use super::*;
@@ -341,6 +389,7 @@ mod tests {
         let dt1: DateTime<Local> = Local.timestamp(1609426800, 0);
         let dt2: DateTime<Local> = Local.timestamp(1609426801, 0);
         let dt3: DateTime<Local> = Local.timestamp(1609426802, 0);
+        let dt4: DateTime<Local> = Local.timestamp(1609426803, 0);
         let format = "%Y-%m-%d %H:%M:%S";
         let line1 = format!(
             "│>  {} log_event_0                                                                │",
@@ -353,6 +402,10 @@ mod tests {
         let line3 = format!(
             "│>  {} log_event_2                                                                │",
             dt3.format(format).to_string()
+        );
+        let line4 = format!(
+            "│v  {} 123456789012345678901234567890123456789012345678901234567890123456789012345│",
+            dt4.format(format).to_string()
         );
         let lines = vec![
             "query: [], mode: [Tail]                                                                             ",
@@ -372,6 +425,32 @@ mod tests {
             .unwrap()
             .events
             .set_items(make_log_events(0, 2, 1609426800000));
+        test_case(&mut event_area, Color::White, lines);
+        // next token and opened event exist
+        event_area
+            .state
+            .lock()
+            .unwrap()
+            .events
+            .push_items(&mut vec![FilteredLogEvent {
+                message: Some(String::from("123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890")),
+                timestamp: Some(1609426803000),
+                ..Default::default()
+            }]);
+        event_area.state.lock().unwrap().events.toggle_select(3);
+        event_area.state.lock().unwrap().next_token = Some(String::from("next_token"));
+        let lines = vec![
+            "query: [], mode: [Tail]                                                                             ",
+            "┌test-log-group────────────────────────────────────────────────────────────────────────────────────┐",
+            "│   Timestamp           Event                                                                      │",
+            &line1,
+            &line2,
+            &line3,
+            &line4,
+            "│                       678901234567890                                                            │",
+            "│   More...             ...                                                                        │",
+            "└──────────────────────────────────────────────────────────────────────────────────────────────────┘",
+        ];
         test_case(&mut event_area, Color::White, lines);
     }
 
@@ -504,5 +583,16 @@ mod tests {
             original_search_info.get_state(),
             event_area.search_info.get_state()
         );
+    }
+
+    #[test]
+    fn test_insert_newline() {
+        let (result_str, result_height) = insert_newline(
+            &mut String::from("1234567890 abcdefghijklmn ABCDEFGHIJKLMN"),
+            5,
+        );
+        let expected_str = String::from("12345\n67890\n abcd\nefghi\njklmn\n ABCD\nEFGHI\nJKLMN");
+        assert_eq!(expected_str, result_str);
+        assert_eq!(8, result_height);
     }
 }

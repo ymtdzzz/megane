@@ -57,19 +57,12 @@ pub fn make_log_events(from: usize, to: usize, timestamp: u64) -> Vec<FilteredLo
     events
 }
 
-pub fn get_events(from: usize, to: usize, has_more: bool) -> Vec<FilteredLogEvent> {
+pub fn get_events(from: usize, to: usize) -> Vec<FilteredLogEvent> {
     let mut events = vec![];
     for i in from..to {
         let mut event = FilteredLogEvent::default();
         event.event_id = Some(i.to_string());
         event.message = Some(i.to_string());
-        event.timestamp = None;
-        events.push(event);
-    }
-    if has_more {
-        let mut event = FilteredLogEvent::default();
-        event.event_id = Some(MORE_LOG_EVENT_ID.clone());
-        event.message = Some(String::from(""));
         event.timestamp = None;
         events.push(event);
     }

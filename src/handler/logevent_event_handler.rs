@@ -45,7 +45,7 @@ impl EventHandler for LogEventEventHandler {
                 .lock()
                 .unwrap()
                 .events
-                .push_items(&mut fetched_log_events, None);
+                .push_items(&mut fetched_log_events);
             self.state.lock().unwrap().next_token = next_token;
             self.state.lock().unwrap().is_fetching = false;
         }

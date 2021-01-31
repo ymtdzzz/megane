@@ -6,6 +6,7 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use lazy_static::lazy_static;
 use tokio::sync::mpsc;
 use tui::{
     backend::Backend,
@@ -22,6 +23,14 @@ use crate::{
     state::{logevents_state::LogEventsState, search_state::SearchState},
     ui::{search_condition_dialog::SearchConditionDialog, search_info::SearchInfo, Drawable},
 };
+
+lazy_static! {
+    static ref TABLE_CONSTRAINT: [Constraint; 3] = [
+        Constraint::Length(2),
+        Constraint::Percentage(20),
+        Constraint::Percentage(80),
+    ];
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Selection {
@@ -117,8 +126,21 @@ where
         let mut rows = vec![];
         let mut state = TableState::default();
         if let Ok(s) = self.state.try_lock() {
+            // get event row width
+            let table_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(TABLE_CONSTRAINT.as_ref())
+                .split(chunks[1]);
+            let width = table_chunks[2].width - 3;
+
             state = s.state.clone();
             s.events.items().iter().for_each(|item| {
+                let mut msg = if let Some(msg) = &item.message {
+                    msg.clone()
+                } else {
+                    String::default()
+                };
+                let (event_msg, row_height) = insert_newline(&mut msg, width);
                 rows.push(
                     Row::new(vec![
                         // TODO: "v" when its fold flag is false
@@ -129,18 +151,9 @@ where
                         } else {
                             "".to_string()
                         },
-                        if let Some(msg) = &item.message {
-                            // TODO: insert newline when its fold flag is false
-                            //let m = msg.clone();
-                            // if m.len() > 10 {
-                            //     m.insert_str(10, "\n");
-                            // }
-                            msg.clone()
-                        } else {
-                            "".to_string()
-                        },
+                        event_msg,
                     ])
-                    .height(1),
+                    .height(row_height),
                 );
             });
             if s.is_fetching {
@@ -165,11 +178,7 @@ where
                     Row::new(vec![" ", "Timestamp", "Event"])
                         .style(Style::default().fg(Color::White)),
                 )
-                .widths(&[
-                    Constraint::Length(2),
-                    Constraint::Percentage(20),
-                    Constraint::Percentage(80),
-                ])
+                .widths(TABLE_CONSTRAINT.as_ref())
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD))
                 .style(Style::default())
                 .column_spacing(1)
@@ -266,6 +275,22 @@ where
         }
         false
     }
+}
+
+// (row, height)
+fn insert_newline(row: &mut String, width: u16) -> (String, u16) {
+    let mut height: u16 = 1;
+    let mut len = row.len() as u16;
+    let mut current_pos = width;
+    if len > width {
+        while current_pos < len {
+            row.insert_str(current_pos as usize, "\n");
+            len = len.saturating_add(1);
+            current_pos = current_pos.saturating_add(width + 1);
+            height = height.saturating_add(1);
+        }
+    }
+    (row.to_string(), height)
 }
 
 #[cfg(test)]
@@ -504,5 +529,16 @@ mod tests {
             original_search_info.get_state(),
             event_area.search_info.get_state()
         );
+    }
+
+    #[test]
+    fn test_insert_newline() {
+        let (result_str, result_height) = insert_newline(
+            &mut String::from("1234567890 abcdefghijklmn ABCDEFGHIJKLMN"),
+            5,
+        );
+        let expected_str = String::from("12345\n67890\n abcd\nefghi\njklmn\n ABCD\nEFGHI\nJKLMN");
+        assert_eq!(expected_str, result_str);
+        assert_eq!(8, result_height);
     }
 }

@@ -2,9 +2,12 @@ use std::sync::{Arc, Mutex};
 
 use megane::{
     client::LogClient,
-    event::LogEventEvent,
+    event::{LogEventEvent, TailLogEventEvent},
     handler::{logevent_event_handler::LogEventEventHandler, EventHandler},
-    state::logevents_state::LogEventsState,
+    state::{
+        logevents_state::LogEventsState,
+        search_state::{SearchMode, SearchState},
+    },
 };
 
 mod common;
@@ -13,17 +16,23 @@ mod common;
 async fn test_run() {
     let state = Arc::new(Mutex::new(LogEventsState::new()));
     let (mut inst_tx, inst_rx) = tokio::sync::mpsc::channel::<LogEventEvent>(1);
+    let (tail_inst_tx, _tail_inst_rx) = tokio::sync::mpsc::channel::<TailLogEventEvent>(1);
     let mock_client = common::get_mock_client("logevents_01.json");
-    let mut handler =
-        LogEventEventHandler::new(LogClient::new(mock_client), Arc::clone(&state), inst_rx);
+    let mut handler = LogEventEventHandler::new(
+        LogClient::new(mock_client),
+        Arc::clone(&state),
+        inst_rx,
+        tail_inst_tx,
+    );
     let handle = tokio::spawn(async move {
         handler.run().await.unwrap();
     });
+    let search_state = Some(SearchState::new(String::default(), SearchMode::TwelveHours));
     assert!(inst_tx
         .send(LogEventEvent::FetchLogEvents(
             "log group name".to_string(),
             None,
-            None,
+            search_state,
             true
         ))
         .await

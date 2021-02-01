@@ -242,7 +242,6 @@ where
         if let Some(m) = mode {
             self.radios.select(m);
             self.state.mode = m.clone();
-            println!("{:?}", m);
         }
     }
 
@@ -279,6 +278,10 @@ where
             Some(utc.timestamp_millis())
         };
         Ok((from, to))
+    }
+
+    pub fn is_tail(&self) -> bool {
+        self.state.mode == SearchMode::Tail
     }
 }
 

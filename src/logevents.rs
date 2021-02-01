@@ -97,8 +97,13 @@ impl LogEvents {
         }
         if let Some(idx) = idx {
             let idx = idx;
+            let current_len = self.items.len();
             let mut items_to_push = items.split_off(idx);
+            let push_len = items_to_push.len();
             self.items.append(&mut items_to_push);
+            for j in current_len..current_len + push_len {
+                self.toggle_select(j);
+            }
         }
     }
 

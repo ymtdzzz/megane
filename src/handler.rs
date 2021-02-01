@@ -5,6 +5,7 @@ pub mod input_event_handler;
 pub mod logevent_event_handler;
 pub mod loggroup_event_handler;
 pub mod main_event_handler;
+pub mod tail_logevent_event_handler;
 
 #[async_trait]
 pub trait EventHandler {

@@ -32,17 +32,26 @@ impl LogGroupEventHandler {
 #[async_trait]
 impl EventHandler for LogGroupEventHandler {
     async fn run(&mut self) -> Result<()> {
-        while let LogGroupEvent::FetchLogGroups = self.inst_rx.recv().await.unwrap() {
-            // TODO: try_lock()?
-            // TODO: error handling
-            self.state.lock().unwrap().is_fetching = true;
-            let mut fetched_log_groups = self.client.fetch_log_groups().await?;
-            self.state
-                .lock()
-                .unwrap()
-                .log_groups
-                .push_items(&mut fetched_log_groups, false);
-            self.state.lock().unwrap().is_fetching = false;
+        loop {
+            if let Some(event) = self.inst_rx.recv().await {
+                match event {
+                    LogGroupEvent::FetchLogGroups => {
+                        // TODO: try_lock()?
+                        // TODO: error handling
+                        self.state.lock().unwrap().is_fetching = true;
+                        let mut fetched_log_groups = self.client.fetch_log_groups().await?;
+                        self.state
+                            .lock()
+                            .unwrap()
+                            .log_groups
+                            .push_items(&mut fetched_log_groups, false);
+                        self.state.lock().unwrap().is_fetching = false;
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
         }
         Ok(())
     }

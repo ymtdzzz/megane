@@ -44,21 +44,19 @@ impl LogClient {
     pub async fn fetch_logs(
         &self,
         log_group_name: &str,
-        next_token: Option<String>,
-        condition: Option<SearchState>,
+        next_token: &Option<String>,
+        condition: &SearchState,
     ) -> Result<(Vec<FilteredLogEvent>, Option<String>)> {
         let mut request = FilterLogEventsRequest {
             log_group_name: log_group_name.to_string(),
             limit: Some(100),
-            next_token,
+            next_token: next_token.clone(),
             ..Default::default()
         };
-        if let Some(cond) = condition {
-            request.filter_pattern = Some(cond.query);
-            let (from, to) = cond.mode.get_timestamps();
-            request.start_time = from;
-            request.end_time = to;
-        }
+        request.filter_pattern = Some(condition.query.clone());
+        let (from, to) = condition.mode.get_timestamps();
+        request.start_time = from;
+        request.end_time = to;
         let response = self.client.filter_log_events(request).await?;
         let events = if let Some(i) = response.events {
             i
@@ -88,7 +86,7 @@ mod tests {
         let mock_client = get_mock_client("logevents_01.json");
         let client = LogClient::new(mock_client);
         let (result, next_token) = client
-            .fetch_logs("test-log-group", None, None)
+            .fetch_logs("test-log-group", &None, &SearchState::default())
             .await
             .unwrap();
         let expect = make_log_events(1, 5, 1609426800000);

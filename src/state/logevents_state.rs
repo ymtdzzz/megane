@@ -60,6 +60,10 @@ impl LogEventsState {
         };
     }
 
+    pub fn cursor_last(&mut self) {
+        self.state.select(Some(self.events.items().len()));
+    }
+
     pub fn need_more_fetching(&self) -> bool {
         if self.next_token.is_some() {
             if let Some(s) = self.state.selected() {

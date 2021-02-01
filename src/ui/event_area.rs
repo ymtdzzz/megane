@@ -167,7 +167,13 @@ where
                     .height(row_height),
                 );
             });
-            if s.is_fetching {
+            if self.search_condition_dialog.is_tail() {
+                rows.push(Row::new(vec![
+                    "".to_string(),
+                    "Waiting for data...".to_string(),
+                    "...".to_string(),
+                ]));
+            } else if s.is_fetching {
                 rows.push(Row::new(vec![
                     // TODO: export function
                     self.loader.get_char().to_string(),

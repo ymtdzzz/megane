@@ -1,11 +1,13 @@
 language: rust
 dist: focal
 rust:
+- stable
 - nightly
 cache:
   cargo: true
 install:
 - rustup update
+- rustup default nightly
 - rustup component add clippy
 - cargo install grcov rust-covfix
 jobs:

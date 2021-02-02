@@ -6,7 +6,7 @@ cache:
   cargo: true
 install:
 - rustup update
-- rustup component add clippy rustfmt --toolchain nightly
+- rustup component add clippy
 - cargo install grcov rust-covfix
 jobs:
   include:
@@ -16,7 +16,7 @@ jobs:
   - stage: check rustfmt style && run clippy
     script:
     - cargo clippy -Z unstable-options -- -D warnings
-    - cargo fmt --all -- --check
+    - cargo +stable fmt --all -- --check
   - stage: coverage sending
     script:
     - bash coverage.sh ontravis sendcov

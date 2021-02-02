@@ -5,7 +5,7 @@ cache:
   cargo: true
 install:
 - rustup update
-- rustup component add clippy rustfmt
+- rustup component add clippy rustfmt --toolchain nightly
 - cargo install grcov rust-covfix
 jobs:
   include:

@@ -17,6 +17,7 @@ jobs:
     - cargo test
   - stage: check rustfmt style && run clippy
     script:
+    - rustup component add rustfmt --toolchain stable-x86_64-unknown-linux-gnu
     - cargo clippy -Z unstable-options -- -D warnings
     - cargo +stable fmt --all -- --check
   - stage: coverage sending

@@ -11,10 +11,7 @@ use tui::{
 
 use crate::{
     event::LogEventEvent,
-    state::{
-        logevents_state::LogEventsState,
-        search_state::SearchState,
-    },
+    state::{logevents_state::LogEventsState, search_state::SearchState},
     ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
 };
 

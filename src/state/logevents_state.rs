@@ -60,6 +60,10 @@ impl LogEventsState {
         };
     }
 
+    pub fn cursor_last(&mut self) {
+        self.state.select(Some(self.events.items().len()));
+    }
+
     pub fn need_more_fetching(&self) -> bool {
         if self.next_token.is_some() {
             if let Some(s) = self.state.selected() {
@@ -94,7 +98,7 @@ mod tests {
     fn test_reset() {
         let mut state = LogEventsState::default();
         let mut events = vec![FilteredLogEvent::default()];
-        state.events.push_items(&mut events);
+        state.events.push_items(&mut events, false);
         let expected = LogEventsState::default();
         assert!(!state.events.is_same(&expected.events));
         state.reset();

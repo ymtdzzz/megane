@@ -47,17 +47,19 @@ impl EventHandler for MainEventHandler {
             // draw ui according to app state
             self.terminal.draw(|f| middle.app.draw(f, f.size()))?;
             // update app state
-            match self.input_rx.recv().await.unwrap() {
-                Event::Input(event) => match event.code {
-                    KeyCode::Char('q') => {
-                        teardown_terminal(&mut self.terminal)?;
-                        break;
-                    }
-                    _ => {
-                        middle.app.handle_event(event).await;
-                    }
-                },
-                Event::Tick => {}
+            if let Some(event) = self.input_rx.recv().await {
+                match event {
+                    Event::Input(event) => match event.code {
+                        KeyCode::Char('q') => {
+                            teardown_terminal(&mut self.terminal)?;
+                            break;
+                        }
+                        _ => {
+                            middle.app.handle_event(event).await;
+                        }
+                    },
+                    Event::Tick => {}
+                }
             }
         }
         Ok(())

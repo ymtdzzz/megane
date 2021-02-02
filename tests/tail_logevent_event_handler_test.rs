@@ -2,8 +2,8 @@ use std::sync::{Arc, Mutex};
 
 use megane::{
     client::LogClient,
-    event::{LogEventEvent, TailLogEventEvent},
-    handler::{logevent_event_handler::LogEventEventHandler, EventHandler},
+    event::TailLogEventEvent,
+    handler::{tail_logevent_event_handler::TailLogEventEventHandler, EventHandler},
     state::{
         logevents_state::LogEventsState,
         search_state::{SearchMode, SearchState},
@@ -14,22 +14,21 @@ mod common;
 
 #[tokio::test]
 async fn test_run_basis() {
+    // start tail mode and fetch some logs
     let state = Arc::new(Mutex::new(LogEventsState::new()));
-    let (mut inst_tx, inst_rx) = tokio::sync::mpsc::channel::<LogEventEvent>(1);
-    let (tail_inst_tx, _tail_inst_rx) = tokio::sync::mpsc::channel::<TailLogEventEvent>(1);
+    let (mut tail_inst_tx, tail_inst_rx) = tokio::sync::mpsc::channel::<TailLogEventEvent>(1);
     let mock_client = common::get_mock_client("logevents_01.json");
-    let mut handler = LogEventEventHandler::new(
+    let mut handler = TailLogEventEventHandler::new(
         LogClient::new(mock_client),
         Arc::clone(&state),
-        inst_rx,
-        tail_inst_tx,
+        tail_inst_rx,
     );
     let handle = tokio::spawn(async move {
         handler.run().await.unwrap();
     });
     let search_state = Some(SearchState::new(String::default(), SearchMode::TwelveHours));
-    assert!(inst_tx
-        .send(LogEventEvent::FetchLogEvents(
+    assert!(tail_inst_tx
+        .send(TailLogEventEvent::Start(
             "log group name".to_string(),
             None,
             search_state,
@@ -37,7 +36,8 @@ async fn test_run_basis() {
         ))
         .await
         .is_ok());
-    assert!(inst_tx.send(LogEventEvent::Abort).await.is_ok());
+    assert!(tail_inst_tx.send(TailLogEventEvent::Tick).await.is_ok());
+    assert!(tail_inst_tx.send(TailLogEventEvent::Abort).await.is_ok());
 
     let _ = handle.await.unwrap();
 
@@ -61,33 +61,22 @@ async fn test_run_basis() {
 }
 
 #[tokio::test]
-async fn test_run_send_tail() {
+async fn test_run_stop() {
+    // fetch some logs but stop tail mode and delete all fetched logs
     let state = Arc::new(Mutex::new(LogEventsState::new()));
-    let (mut inst_tx, inst_rx) = tokio::sync::mpsc::channel::<LogEventEvent>(1);
-    let (tail_inst_tx, mut tail_inst_rx) = tokio::sync::mpsc::channel::<TailLogEventEvent>(1);
+    let (mut tail_inst_tx, tail_inst_rx) = tokio::sync::mpsc::channel::<TailLogEventEvent>(1);
     let mock_client = common::get_mock_client("logevents_01.json");
-    let mut handler = LogEventEventHandler::new(
+    let mut handler = TailLogEventEventHandler::new(
         LogClient::new(mock_client),
         Arc::clone(&state),
-        inst_rx,
-        tail_inst_tx,
+        tail_inst_rx,
     );
     let handle = tokio::spawn(async move {
         handler.run().await.unwrap();
     });
-    let search_state = Some(SearchState::new(String::default(), SearchMode::Tail));
-    let search_state_clone = search_state.clone();
-
-    let assert_handle = tokio::spawn(async move {
-        let event = tail_inst_rx.recv().await.unwrap();
-        assert_eq!(
-            TailLogEventEvent::Start("log group name".to_string(), None, search_state_clone, true),
-            event
-        );
-    });
-
-    assert!(inst_tx
-        .send(LogEventEvent::FetchLogEvents(
+    let search_state = Some(SearchState::new(String::default(), SearchMode::TwelveHours));
+    assert!(tail_inst_tx
+        .send(TailLogEventEvent::Start(
             "log group name".to_string(),
             None,
             search_state,
@@ -95,8 +84,11 @@ async fn test_run_send_tail() {
         ))
         .await
         .is_ok());
-    assert!(inst_tx.send(LogEventEvent::Abort).await.is_ok());
+    assert!(tail_inst_tx.send(TailLogEventEvent::Tick).await.is_ok());
+    assert!(tail_inst_tx.send(TailLogEventEvent::Stop).await.is_ok());
+    assert!(tail_inst_tx.send(TailLogEventEvent::Abort).await.is_ok());
 
     let _ = handle.await.unwrap();
-    let _ = assert_handle.await.unwrap();
+
+    assert!(state.lock().unwrap().events.items().is_empty());
 }

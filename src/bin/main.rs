@@ -28,7 +28,7 @@ use megane::{
     handler::{
         input_event_handler::InputEventHandler, logevent_event_handler::LogEventEventHandler,
         loggroup_event_handler::LogGroupEventHandler, main_event_handler::MainEventHandler,
-        EventHandler,
+        tail_logevent_event_handler::TailLogEventEventHandler, EventHandler,
     },
     state::{
         logevents_state::LogEventsState, loggroups_state::LogGroupsState,
@@ -73,12 +73,31 @@ async fn main() -> Result<()> {
     let logevent_state_clone_1 = Arc::clone(&logevent_states[1]);
     let logevent_state_clone_2 = Arc::clone(&logevent_states[2]);
     let logevent_state_clone_3 = Arc::clone(&logevent_states[3]);
+    // for tail mode
+    let logevent_state_clone_0_clone = Arc::clone(&logevent_states[0]);
+    let logevent_state_clone_1_clone = Arc::clone(&logevent_states[1]);
+    let logevent_state_clone_2_clone = Arc::clone(&logevent_states[2]);
+    let logevent_state_clone_3_clone = Arc::clone(&logevent_states[3]);
 
     // input event handling
+    let (tail_logevent_inst_tx_0, tail_logevent_inst_rx_0) = mpsc::channel(1);
+    let (tail_logevent_inst_tx_1, tail_logevent_inst_rx_1) = mpsc::channel(1);
+    let (tail_logevent_inst_tx_2, tail_logevent_inst_rx_2) = mpsc::channel(1);
+    let (tail_logevent_inst_tx_3, tail_logevent_inst_rx_3) = mpsc::channel(1);
+    let tail_logevent_inst_txs = [
+        tail_logevent_inst_tx_0.clone(),
+        tail_logevent_inst_tx_1.clone(),
+        tail_logevent_inst_tx_2.clone(),
+        tail_logevent_inst_tx_3.clone(),
+    ];
     let (input_tx, input_rx) = tokio::sync::mpsc::channel(1);
     tokio::spawn(async move {
-        let mut input_event_handler =
-            InputEventHandler::new(Duration::from_millis(100), input_tx, false);
+        let mut input_event_handler = InputEventHandler::new(
+            Duration::from_millis(100),
+            input_tx,
+            tail_logevent_inst_txs,
+            false,
+        );
         let _ = input_event_handler.run().await;
     });
 
@@ -101,27 +120,81 @@ async fn main() -> Result<()> {
     let (logevent_inst_tx_3, logevent_inst_rx_3) = mpsc::channel(1);
     let log_client_clone = log_client.clone();
     tokio::spawn(async move {
-        let mut logevent_event_handler =
-            LogEventEventHandler::new(log_client_clone, logevent_state_clone_0, logevent_inst_rx_0);
+        let mut logevent_event_handler = LogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_0,
+            logevent_inst_rx_0,
+            tail_logevent_inst_tx_0,
+        );
         let _ = logevent_event_handler.run().await;
     });
     let log_client_clone = log_client.clone();
     tokio::spawn(async move {
-        let mut logevent_event_handler =
-            LogEventEventHandler::new(log_client_clone, logevent_state_clone_1, logevent_inst_rx_1);
+        let mut logevent_event_handler = LogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_1,
+            logevent_inst_rx_1,
+            tail_logevent_inst_tx_1,
+        );
         let _ = logevent_event_handler.run().await;
     });
     let log_client_clone = log_client.clone();
     tokio::spawn(async move {
-        let mut logevent_event_handler =
-            LogEventEventHandler::new(log_client_clone, logevent_state_clone_2, logevent_inst_rx_2);
+        let mut logevent_event_handler = LogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_2,
+            logevent_inst_rx_2,
+            tail_logevent_inst_tx_2,
+        );
         let _ = logevent_event_handler.run().await;
     });
     let log_client_clone = log_client.clone();
     tokio::spawn(async move {
-        let mut logevent_event_handler =
-            LogEventEventHandler::new(log_client_clone, logevent_state_clone_3, logevent_inst_rx_3);
+        let mut logevent_event_handler = LogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_3,
+            logevent_inst_rx_3,
+            tail_logevent_inst_tx_3,
+        );
         let _ = logevent_event_handler.run().await;
+    });
+
+    // tail logevent event handling
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut tail_logevent_event_handler = TailLogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_0_clone,
+            tail_logevent_inst_rx_0,
+        );
+        let _ = tail_logevent_event_handler.run().await;
+    });
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut tail_logevent_event_handler = TailLogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_1_clone,
+            tail_logevent_inst_rx_1,
+        );
+        let _ = tail_logevent_event_handler.run().await;
+    });
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut tail_logevent_event_handler = TailLogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_2_clone,
+            tail_logevent_inst_rx_2,
+        );
+        let _ = tail_logevent_event_handler.run().await;
+    });
+    let log_client_clone = log_client.clone();
+    tokio::spawn(async move {
+        let mut tail_logevent_event_handler = TailLogEventEventHandler::new(
+            log_client_clone,
+            logevent_state_clone_3_clone,
+            tail_logevent_inst_rx_3,
+        );
+        let _ = tail_logevent_event_handler.run().await;
     });
 
     // setup app

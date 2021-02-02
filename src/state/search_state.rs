@@ -15,7 +15,10 @@ pub enum SearchMode {
 impl SearchMode {
     pub fn get_timestamps(&self) -> (Option<i64>, Option<i64>) {
         match self {
-            SearchMode::Tail => (None, None),
+            SearchMode::Tail => {
+                let from = Utc::now() - Duration::minutes(1);
+                (Some(from.timestamp_millis()), None)
+            }
             SearchMode::OneMinute => {
                 let from = Utc::now() - Duration::minutes(1);
                 (Some(from.timestamp_millis()), None)
@@ -86,7 +89,7 @@ impl SearchState {
 
 impl Default for SearchState {
     fn default() -> Self {
-        Self::new("".to_string(), SearchMode::Tail)
+        Self::new("".to_string(), SearchMode::OneMinute)
     }
 }
 
@@ -120,8 +123,7 @@ mod tests {
     #[test]
     fn test_get_timestamps() {
         // tail
-        let mode = SearchMode::Tail;
-        assert_eq!((None, None), mode.get_timestamps());
+        test_from_duration(SearchMode::Tail, Duration::minutes(1), true);
         // presets
         test_from_duration(SearchMode::OneMinute, Duration::minutes(1), true);
         test_from_duration(SearchMode::ThirtyMinutes, Duration::minutes(30), true);

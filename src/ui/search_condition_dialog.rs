@@ -242,7 +242,6 @@ where
         if let Some(m) = mode {
             self.radios.select(m);
             self.state.mode = m.clone();
-            println!("{:?}", m);
         }
     }
 
@@ -279,6 +278,10 @@ where
             Some(utc.timestamp_millis())
         };
         Ok((from, to))
+    }
+
+    pub fn is_tail(&self) -> bool {
+        self.state.mode == SearchMode::Tail
     }
 }
 
@@ -709,7 +712,7 @@ mod tests {
             SearchConditionDialog::new(SearchState::default());
         assert_eq!(0, dialog.focus);
         assert_eq!(
-            SearchState::new("".to_string(), SearchMode::Tail),
+            SearchState::new("".to_string(), SearchMode::OneMinute),
             dialog.state
         );
         // Down

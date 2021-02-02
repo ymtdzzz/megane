@@ -1,11 +1,14 @@
 language: rust
+dist: focal
 rust:
 - nightly
 cache:
   cargo: true
 install:
+- rustup install stable
 - rustup update
-- rustup component add clippy rustfmt
+- rustup default nightly
+- rustup component add clippy
 - cargo install grcov rust-covfix
 jobs:
   include:
@@ -14,8 +17,9 @@ jobs:
     - cargo test
   - stage: check rustfmt style && run clippy
     script:
+    - rustup component add rustfmt --toolchain stable-x86_64-unknown-linux-gnu
     - cargo clippy -Z unstable-options -- -D warnings
-    - cargo fmt --all -- --check
+    - cargo +stable fmt --all -- --check
   - stage: coverage sending
     script:
     - bash coverage.sh ontravis sendcov

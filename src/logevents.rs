@@ -76,7 +76,7 @@ impl LogEvents {
         }
     }
 
-    pub fn push_items(&mut self, items: &mut Vec<FilteredLogEvent>) {
+    pub fn push_items(&mut self, items: &mut Vec<FilteredLogEvent>, open_all: bool) {
         let mut idx: Option<usize> = None;
         // Skip the duplicate items.
         for (i, val) in items.iter().enumerate() {
@@ -101,8 +101,10 @@ impl LogEvents {
             let mut items_to_push = items.split_off(idx);
             let push_len = items_to_push.len();
             self.items.append(&mut items_to_push);
-            for j in current_len..current_len + push_len {
-                self.toggle_select(j);
+            if open_all {
+                for j in current_len..current_len + push_len {
+                    self.toggle_select(j);
+                }
             }
         }
     }
@@ -178,9 +180,9 @@ mod tests {
     fn test_push_items() {
         let mut log_events = LogEvents::new(vec![]);
         let mut events = get_events(1, 2);
-        log_events.push_items(&mut events);
+        log_events.push_items(&mut events, false);
         let mut events = get_events(2, 4);
-        log_events.push_items(&mut events);
+        log_events.push_items(&mut events, false);
         let expected = LogEvents::new(get_events(1, 4));
         assert_eq!(expected.items.len(), log_events.items.len());
         for (i, val) in log_events.items.iter().enumerate() {
@@ -190,7 +192,7 @@ mod tests {
         // has more item
         let mut log_events = LogEvents::new(get_events(0, 2));
         let mut events = get_events(0, 5);
-        log_events.push_items(&mut events);
+        log_events.push_items(&mut events, false);
         let expected = LogEvents::new(get_events(0, 5));
         assert_eq!(expected.items.len(), log_events.items.len());
         for (i, val) in log_events.items.iter().enumerate() {

@@ -98,7 +98,7 @@ mod tests {
     fn test_reset() {
         let mut state = LogEventsState::default();
         let mut events = vec![FilteredLogEvent::default()];
-        state.events.push_items(&mut events);
+        state.events.push_items(&mut events, false);
         let expected = LogEventsState::default();
         assert!(!state.events.is_same(&expected.events));
         state.reset();

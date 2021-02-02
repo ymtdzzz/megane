@@ -38,7 +38,7 @@ impl InputEventHandler {
 #[async_trait]
 impl EventHandler for InputEventHandler {
     async fn run(&mut self) -> Result<()> {
-        let tail_tick_rate = TAIL_RATE.clone();
+        let tail_tick_rate = *TAIL_RATE;
         let mut last_tail_tick = Instant::now();
         let mut last_tick = Instant::now();
         let start_time = Instant::now();

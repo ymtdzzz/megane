@@ -20,7 +20,10 @@ use crate::{
     constant,
     event::LogEventEvent,
     loader::Loader,
-    state::{logevents_state::LogEventsState, search_state::SearchState},
+    state::{
+        logevents_state::LogEventsState,
+        search_state::{SearchMode, SearchState},
+    },
     ui::{search_condition_dialog::SearchConditionDialog, search_info::SearchInfo, Drawable},
 };
 
@@ -62,14 +65,15 @@ where
         state: Arc<Mutex<LogEventsState>>,
         logevent_inst_tx: mpsc::Sender<LogEventEvent>,
     ) -> Self {
+        let search_state = SearchState::new(String::default(), SearchMode::Tail);
         EventArea {
             log_group_name: log_group_name.to_string(),
             state,
             logevent_inst_tx,
             is_selected: false,
             loader: Loader::new(constant::LOADER.clone()),
-            search_info: SearchInfo::default(),
-            search_condition_dialog: SearchConditionDialog::new(SearchState::default()),
+            search_info: SearchInfo::new(search_state.clone()),
+            search_condition_dialog: SearchConditionDialog::new(search_state),
             selection: Selection::Events,
             _phantom: PhantomData,
         }
@@ -150,7 +154,6 @@ where
                 };
                 rows.push(
                     Row::new(vec![
-                        // TODO: "v" when its fold flag is false
                         if open {
                             "v".to_string()
                         } else {
@@ -339,7 +342,7 @@ mod tests {
             lines
         } else {
             vec![
-                "query: [], mode: [Tail]                                                                             ",
+                "query: [], mode: [1 minute]                                                                         ",
                 "┌Events────────────────────────────────────────────────────────────────────────────────────────────┐",
                 "│   Timestamp           Event                                                                      │",
                 "│                                                                                                  │",
@@ -413,6 +416,7 @@ mod tests {
             "│v  {} 123456789012345678901234567890123456789012345678901234567890123456789012345│",
             dt4.format(format).to_string()
         );
+        // default is Tail mode
         let lines = vec![
             "query: [], mode: [Tail]                                                                             ",
             "┌test-log-group────────────────────────────────────────────────────────────────────────────────────┐",
@@ -420,7 +424,7 @@ mod tests {
             &line1,
             &line2,
             &line3,
-            "│                                                                                                  │",
+            "│   Waiting for data... ...                                                                        │",
             "│                                                                                                  │",
             "│                                                                                                  │",
             "└──────────────────────────────────────────────────────────────────────────────────────────────────┘",
@@ -442,7 +446,7 @@ mod tests {
                 message: Some(String::from("123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890")),
                 timestamp: Some(1609426803000),
                 ..Default::default()
-            }]);
+            }], false);
         event_area.state.lock().unwrap().events.toggle_select(3);
         event_area.state.lock().unwrap().next_token = Some(String::from("next_token"));
         let lines = vec![
@@ -454,7 +458,7 @@ mod tests {
             &line3,
             &line4,
             "│                       678901234567890                                                            │",
-            "│   More...             ...                                                                        │",
+            "│   Waiting for data... ...                                                                        │",
             "└──────────────────────────────────────────────────────────────────────────────────────────────────┘",
         ];
         test_case(&mut event_area, Color::White, lines);

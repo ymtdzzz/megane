@@ -13,7 +13,7 @@ use crate::{
     event::LogEventEvent,
     state::{
         logevents_state::LogEventsState,
-        search_state::{SearchMode, SearchState},
+        search_state::SearchState,
     },
     ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
 };
@@ -483,7 +483,7 @@ mod tests {
         test_case(&mut app, Color::Yellow, Color::White, vec![], 30, false);
         app.event_areas.push(EventArea::default());
         let lines = vec![
-            "┌Log Groups [type to search]─┐query: [], mode: [Tail]                                               ",
+            "┌Log Groups [type to search]─┐query: [], mode: [1 minute]                                           ",
             "│                            │┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││   Timestamp     Event                                              │",
             "│                            ││                                                                    │",
@@ -498,7 +498,7 @@ mod tests {
         // folding side menu
         app.toggle_side_fold();
         let lines = vec![
-            "┌L┐query: [], mode: [Tail]                                                                          ",
+            "┌L┐query: [], mode: [1 minute]                                                                      ",
             "│ │┌Events─────────────────────────────────────────────────────────────────────────────────────────┐",
             "│ ││   Timestamp           Event                                                                   │",
             "│ ││                                                                                               │",
@@ -514,7 +514,7 @@ mod tests {
         app.toggle_side_fold();
         app.select_state = SelectState::EventAreas(0);
         let lines = vec![
-            "┌Log Groups [type to search]─┐query: [], mode: [Tail]                                               ",
+            "┌Log Groups [type to search]─┐query: [], mode: [1 minute]                                           ",
             "│                            │┌Events──────────────────────────────────────────────────────────────┐",
             "│                            ││   Timestamp     Event                                              │",
             "│                            ││                                                                    │",

@@ -89,7 +89,7 @@ impl SearchState {
 
 impl Default for SearchState {
     fn default() -> Self {
-        Self::new("".to_string(), SearchMode::Tail)
+        Self::new("".to_string(), SearchMode::OneMinute)
     }
 }
 

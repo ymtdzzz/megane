@@ -9,6 +9,10 @@ repository = "https://github.com/zeroclock/megane"
 readme = "README.md"
 license = "MIT"
 
+[[bin]]
+path = "src/bin/main.rs"
+name = "megane"
+
 [dependencies]
 lazy_static = "1.4.0"
 clap = "2.33.3"

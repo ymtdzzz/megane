@@ -26,8 +26,8 @@ async fn test_run() {
         .is_ok());
     assert!(input_tx
         .send(Event::Input(KeyEvent::new(
-            KeyCode::Char('q'),
-            KeyModifiers::NONE
+            KeyCode::Char('c'),
+            KeyModifiers::CONTROL
         )))
         .await
         .is_ok());

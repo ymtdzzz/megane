@@ -30,6 +30,7 @@ jobs:
       - sudo apt-get update
       - sudo apt-get install -y mingw-w64 clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev
       - bash ./build/osxcross_setup.sh
+      - rustup target add x86_64-unknown-linux-gnu x86_64-apple-darwin x86_64-pc-windows-gnu
     script:
       - cargo build --target x86_64-unknown-linux-gnu --release
       - cargo build --target x86_64-pc-windows-gnu --release

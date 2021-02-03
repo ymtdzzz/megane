@@ -46,10 +46,10 @@ jobs:
           tags: true
         api_key:
           secure: "xNy4pIymBk8MmMAjKnEe20niF1Qj9+dvVaFGzSI6vGTxfoVoqiarionFA42UwjwRKj3xR+yTPynUQCUi/5ItnwROs2LA4EsMstwxAUsPAwUDiA39+IIzkjDY76dJFgw9wN7hEvqG5YbIP1wJMqi+pNTNaPGh6vLZBpfV205m4uUCIMZnpgc60T+n20FM1/wJeyve3SC63SDkbhgO3yYZz9giPNlbxdfw+rpCBres3U35uZsGWXMLy+y9+w9KVzuLhLdNVSCfUmTb8u/zZWFE4C+nvUpb2BQ63Z2rTzC/7He1AvFQHMLtIbLdTc3yod5+haQFeLY2Yh4jOC4wP3VpxW11KwUVFpU2/ro8pRpQramYRGlLWIC8OSLEYpF2MtLG+tMkUc8hVNhSInHCSLlGbwtB9x9hsnk81R8/uQFCKQy0GCof30Yo3IX0Zi4HgouH1qNiSbQSRIhykXsuAReSnYrzBQyPtUa0kby/4XkC+U6kLN6L4gW2J/x2d0+HPPaeHFdrD5991MhssOOxIWpaGuHxv5wBeOc75PSLaBzQKJDoaXbopvO+YMCt7BJhbgPpr0sm5krHhAWv7LOV7xcptibtvDyU/ILKeaSBaWfUdxG/5eDWHjuYY1HtAP3gXQesrh3PR4MQ2HbJTlcalqKjDI5fywG+HMR6LUhz1qPB8qU="
-          file:
-            - "megane_x86_64-unknown-linux-gnu.zip"
-            - "megane_x86_64-pc-windows-gnu.zip"
-            - "megane_x86_64-apple-darwin.zip"
+        file:
+          - "megane_x86_64-unknown-linux-gnu.zip"
+          - "megane_x86_64-pc-windows-gnu.zip"
+          - "megane_x86_64-apple-darwin.zip"
       - provider: cargo
         skip_cleanup: true
         on:

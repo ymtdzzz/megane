@@ -54,7 +54,7 @@ impl EventHandler for MainEventHandler {
                             if let KeyModifiers::CONTROL = event.modifiers {
                                 teardown_terminal(&mut self.terminal)?;
                                 break;
-                            }   
+                            }
                         }
                         _ => {
                             middle.app.handle_event(event).await;

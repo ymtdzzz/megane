@@ -23,7 +23,7 @@ jobs:
   - stage: deploy
     os: linux
     dist: focal
-    if: branch = "release" AND tag IS present
+    if: tag IS present
     services:
       - docker
     before_script:

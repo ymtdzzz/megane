@@ -2,7 +2,7 @@ use std::io::Stdout;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc;
 use tui::{backend::CrosstermBackend, Terminal};
 
@@ -50,9 +50,11 @@ impl EventHandler for MainEventHandler {
             if let Some(event) = self.input_rx.recv().await {
                 match event {
                     Event::Input(event) => match event.code {
-                        KeyCode::Char('q') => {
-                            teardown_terminal(&mut self.terminal)?;
-                            break;
+                        KeyCode::Char('c') => {
+                            if let KeyModifiers::CONTROL = event.modifiers {
+                                teardown_terminal(&mut self.terminal)?;
+                                break;
+                            }
                         }
                         _ => {
                             middle.app.handle_event(event).await;

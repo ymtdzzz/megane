@@ -51,7 +51,6 @@ jobs:
           - "megane_x86_64-pc-windows-gnu.zip"
           - "megane_x86_64-apple-darwin.zip"
       - provider: cargo
-        skip_cleanup: true
         on:
           tags: true
         token:

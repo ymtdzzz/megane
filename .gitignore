@@ -7,3 +7,7 @@ lcov.info
 ccov.zip
 
 log/
+
+osxcross
+
+Cargo.lock

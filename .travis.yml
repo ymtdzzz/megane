@@ -1,5 +1,4 @@
 language: rust
-dist: focal
 rust:
 - nightly
 cache:
@@ -12,17 +11,50 @@ install:
 - cargo install grcov rust-covfix
 jobs:
   include:
-  - stage: unit tests
+  - stage: test and format check
+    os: linux
+    dist: focal
+    before_script:
+      - rustup component add rustfmt --toolchain stable-x86_64-unknown-linux-gnu
     script:
-    - cargo test
-  - stage: check rustfmt style && run clippy
+      - cargo test
+      - cargo clippy -Z unstable-options -- -D warnings
+      - cargo +stable fmt --all -- --check
+  - stage: deploy
+    os: linux
+    dist: focal
+    if: tag IS present
+    services:
+      - docker
+    before_script:
+      - sudo apt-get update
+      - sudo apt-get install -y mingw-w64 clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev zip unzip
+      - bash ./build/osxcross_setup.sh
+      - rustup target add x86_64-unknown-linux-gnu x86_64-apple-darwin x86_64-pc-windows-gnu
     script:
-    - rustup component add rustfmt --toolchain stable-x86_64-unknown-linux-gnu
-    - cargo clippy -Z unstable-options -- -D warnings
-    - cargo +stable fmt --all -- --check
-  - stage: coverage sending
-    script:
-    - bash coverage.sh ontravis sendcov
+      - export PATH="$(pwd)/osxcross/target/bin:$PATH"
+      - cargo build --target x86_64-unknown-linux-gnu --release
+      - cargo build --target x86_64-pc-windows-gnu --release
+      - cargo build --target x86_64-apple-darwin --release
+      - zip megane_x86_64-unknown-linux-gnu.zip "./target/x86_64-unknown-linux-gnu/release/megane"
+      - zip megane_x86_64-pc-windows-gnu.zip "./target/x86_64-pc-windows-gnu/release/megane.exe"
+      - zip megane_x86_64-apple-darwin.zip "./target/x86_64-apple-darwin/release/megane"
+    deploy:
+      - provider: releases
+        skip_cleanup: true
+        on:
+          tags: true
+        api_key:
+          secure: "xNy4pIymBk8MmMAjKnEe20niF1Qj9+dvVaFGzSI6vGTxfoVoqiarionFA42UwjwRKj3xR+yTPynUQCUi/5ItnwROs2LA4EsMstwxAUsPAwUDiA39+IIzkjDY76dJFgw9wN7hEvqG5YbIP1wJMqi+pNTNaPGh6vLZBpfV205m4uUCIMZnpgc60T+n20FM1/wJeyve3SC63SDkbhgO3yYZz9giPNlbxdfw+rpCBres3U35uZsGWXMLy+y9+w9KVzuLhLdNVSCfUmTb8u/zZWFE4C+nvUpb2BQ63Z2rTzC/7He1AvFQHMLtIbLdTc3yod5+haQFeLY2Yh4jOC4wP3VpxW11KwUVFpU2/ro8pRpQramYRGlLWIC8OSLEYpF2MtLG+tMkUc8hVNhSInHCSLlGbwtB9x9hsnk81R8/uQFCKQy0GCof30Yo3IX0Zi4HgouH1qNiSbQSRIhykXsuAReSnYrzBQyPtUa0kby/4XkC+U6kLN6L4gW2J/x2d0+HPPaeHFdrD5991MhssOOxIWpaGuHxv5wBeOc75PSLaBzQKJDoaXbopvO+YMCt7BJhbgPpr0sm5krHhAWv7LOV7xcptibtvDyU/ILKeaSBaWfUdxG/5eDWHjuYY1HtAP3gXQesrh3PR4MQ2HbJTlcalqKjDI5fywG+HMR6LUhz1qPB8qU="
+        file:
+          - "megane_x86_64-unknown-linux-gnu.zip"
+          - "megane_x86_64-pc-windows-gnu.zip"
+          - "megane_x86_64-apple-darwin.zip"
+      - provider: cargo
+        on:
+          tags: true
+        token:
+          secure: "klaqK/wJN6WI33Q7ko6A7leS0Ges73s4962t9MiQjDTIssmnt3bUYIb1tLokkJwdJjJ8kgnbS+mYaQ8cpELZNaY2QdQbLS2CKwmoXz/SzjBbJKG5eDqiTSZ7+YoVEHcjxftwpTgxTcvaF9Gkypw9V4VAlfP+pfZj2hnnqgE9xP8IKMFKHNYHbKMI6sl1vJCdXfahP123rkqiECodmt1Urw7w4GdmMW+fdAKnNSaW464a9FyMSV/MLfXncp3BjTdYQOTMW+ek/DH4d4rpDcidHw+3EUPvrZTmJUH8FkaDLI14FIlP9YyeiJ78R1DcVR07ojcRE7Sn0mW+mE5XijQLPCB655VrSqfcpIotAmgSdSVY22kyM+Wa1RmeSfCAbOHi2jkKz68BPF65xR1MxZkWMiWuVs9bSjGqSz6fuFMpklYiV4svB7eAKTeutgdpBzzbOeAdpZ5TcZlBy90P07eAHLi5OxANxtl104N+lgMUTU3/In5UqrV/zgE2ixYLOxblziiEoDyCSlT7qQs6mgsGCoT08Sqb4EQpN1ySFhbIbnDfrYuP+aODyOMixYL0fBb2rB8ZSpSsWDRd+W/vs0FSlj6vTgg0bupH4mU0aivZ8X3TymnF5azBOuJYP7cIW/ADD+ec9vltBq9MlEonBjBT82qqKajyVDIZovrqSENl1bQ="
 env:
   global:
     secure: PNxMVZn11lg7UKNcQuOSRFtJp8sclsVYE2O4LPZOwvA6U+rLnk7bLqkZjhjW2Knl+a0MI4mm/F/1EyOu7cxcSfnBvvn9PaeoTDodmi+UDw8oPdBA3LIH9U+sbzovvsLF1+HTgnxQzJfXgJQuJ+NyqMIYZ2Z+53I9P68P0F2Xzf9FZdsD+UjIdK7wtRHVcvsGi4Qyvin8jQ+lqw9vd5HIdMp2Ebv6pvAS5n5F3o2pEGuriH9dUc1Y2nCeD1R5FrXFVtxmTM92D3aY8UbKcX4UpyJo7xDc1+dDdZVkU7diYyXndIwfiZMUNdsAYFJ/PzipXNcDiV7Yw9logXFS+rjGDcKLt+RnSAqXLo084VCEi6SFgl5PLXg+44ggseRhkPdGt9+3XxIG2rzdVFXQiReCBu7Z+PY3aKhLQRzE6zN6tsZdVi9DOOTnjM1Ax30zwJqvPHGY7v4Zsrsx7KTR/GHDgGrVGSDucNHXwUL30/rgojyg8E0tO51RSCWB0V1RjV8kzFjRGmVAaLFZgO2bC3U/Nqskfn8hdE+lE/AMiGe2ZCeG2MPkwn/HaM99IMJLPMaQPW+makClAPNzA4nzhXxT9txu/JYLZcLjEeh6tkYW9OlMDwLT4mGfQXdoqJ6iSWfZL5okFkPuqZ2rkJI34VXKt9W4zs7XVZ8B3PderMnOLtA=

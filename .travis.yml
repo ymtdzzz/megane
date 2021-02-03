@@ -38,9 +38,13 @@ jobs:
       - cargo build --target x86_64-apple-darwin --release
     deploy:
       - provider: cargo
+        on:
+          tags: true
         token:
           secure: "klaqK/wJN6WI33Q7ko6A7leS0Ges73s4962t9MiQjDTIssmnt3bUYIb1tLokkJwdJjJ8kgnbS+mYaQ8cpELZNaY2QdQbLS2CKwmoXz/SzjBbJKG5eDqiTSZ7+YoVEHcjxftwpTgxTcvaF9Gkypw9V4VAlfP+pfZj2hnnqgE9xP8IKMFKHNYHbKMI6sl1vJCdXfahP123rkqiECodmt1Urw7w4GdmMW+fdAKnNSaW464a9FyMSV/MLfXncp3BjTdYQOTMW+ek/DH4d4rpDcidHw+3EUPvrZTmJUH8FkaDLI14FIlP9YyeiJ78R1DcVR07ojcRE7Sn0mW+mE5XijQLPCB655VrSqfcpIotAmgSdSVY22kyM+Wa1RmeSfCAbOHi2jkKz68BPF65xR1MxZkWMiWuVs9bSjGqSz6fuFMpklYiV4svB7eAKTeutgdpBzzbOeAdpZ5TcZlBy90P07eAHLi5OxANxtl104N+lgMUTU3/In5UqrV/zgE2ixYLOxblziiEoDyCSlT7qQs6mgsGCoT08Sqb4EQpN1ySFhbIbnDfrYuP+aODyOMixYL0fBb2rB8ZSpSsWDRd+W/vs0FSlj6vTgg0bupH4mU0aivZ8X3TymnF5azBOuJYP7cIW/ADD+ec9vltBq9MlEonBjBT82qqKajyVDIZovrqSENl1bQ="
       - provider: releases
+        on:
+          tags: true
         api_key:
           secure: "xNy4pIymBk8MmMAjKnEe20niF1Qj9+dvVaFGzSI6vGTxfoVoqiarionFA42UwjwRKj3xR+yTPynUQCUi/5ItnwROs2LA4EsMstwxAUsPAwUDiA39+IIzkjDY76dJFgw9wN7hEvqG5YbIP1wJMqi+pNTNaPGh6vLZBpfV205m4uUCIMZnpgc60T+n20FM1/wJeyve3SC63SDkbhgO3yYZz9giPNlbxdfw+rpCBres3U35uZsGWXMLy+y9+w9KVzuLhLdNVSCfUmTb8u/zZWFE4C+nvUpb2BQ63Z2rTzC/7He1AvFQHMLtIbLdTc3yod5+haQFeLY2Yh4jOC4wP3VpxW11KwUVFpU2/ro8pRpQramYRGlLWIC8OSLEYpF2MtLG+tMkUc8hVNhSInHCSLlGbwtB9x9hsnk81R8/uQFCKQy0GCof30Yo3IX0Zi4HgouH1qNiSbQSRIhykXsuAReSnYrzBQyPtUa0kby/4XkC+U6kLN6L4gW2J/x2d0+HPPaeHFdrD5991MhssOOxIWpaGuHxv5wBeOc75PSLaBzQKJDoaXbopvO+YMCt7BJhbgPpr0sm5krHhAWv7LOV7xcptibtvDyU/ILKeaSBaWfUdxG/5eDWHjuYY1HtAP3gXQesrh3PR4MQ2HbJTlcalqKjDI5fywG+HMR6LUhz1qPB8qU="
           file:

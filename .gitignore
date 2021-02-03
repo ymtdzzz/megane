@@ -9,3 +9,5 @@ ccov.zip
 log/
 
 osxcross
+
+Cargo.lock

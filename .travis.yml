@@ -20,6 +20,7 @@ jobs:
       - cargo test
       - cargo clippy -Z unstable-options -- -D warnings
       - cargo +stable fmt --all -- --check
+      - bash coverage.sh ontravis sendcov
   - stage: deploy
     os: linux
     dist: focal

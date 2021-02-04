@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 /// This crate is the wrapper of crossterm::event::KeyEvent.
 /// Implementing Ord trait is necessary for being keys of BTreeMap.
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct KeyEventWrapper {
     inner: KeyEvent,
 }
@@ -13,24 +13,42 @@ impl KeyEventWrapper {
     pub fn new(key_event: KeyEvent) -> Self {
         KeyEventWrapper { inner: key_event }
     }
+
+    pub fn code(&self) -> KeyCode {
+        self.inner.code
+    }
+
+    pub fn modifier(&self) -> KeyModifiers {
+        self.inner.modifiers
+    }
 }
 
 impl Ord for KeyEventWrapper {
     fn cmp(&self, other: &Self) -> Ordering {
+        let mut self_is_longer = true;
         let self_str = self.to_string();
         let other_str = other.to_string();
         let (b1, b2) = if self_str.len() < other_str.len() {
             (self_str.as_bytes(), other_str.as_bytes())
         } else {
+            self_is_longer = false;
             (other_str.as_bytes(), self_str.as_bytes())
         };
         for (i, c) in b1.iter().enumerate() {
             match c.cmp(&b2[i]) {
                 Ordering::Less => {
-                    return Ordering::Greater;
+                    if self_is_longer {
+                        return Ordering::Less;
+                    } else {
+                        return Ordering::Greater;
+                    }
                 }
                 Ordering::Greater => {
-                    return Ordering::Less;
+                    if self_is_longer {
+                        return Ordering::Greater;
+                    } else {
+                        return Ordering::Less;
+                    }
                 }
                 _ => {}
             }
@@ -38,7 +56,11 @@ impl Ord for KeyEventWrapper {
         if self_str.len() == other_str.len() {
             Ordering::Equal
         } else {
-            Ordering::Greater
+            if self_is_longer {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
         }
     }
 }
@@ -105,13 +127,16 @@ mod tests {
         let one = KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL));
         let other = KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::CONTROL));
         assert!(one < other);
+        assert!(other > one);
         // Z+Ctrl == Z+Ctrl
         let one = KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('z'), KeyModifiers::CONTROL));
         let other = KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('z'), KeyModifiers::CONTROL));
         assert!(one == other);
-        // G+Ctrl > G
+        assert!(other == one);
+        // G+Ctrl < G
         let one = KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL));
         let other = KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
         assert!(one > other);
+        assert!(other < one);
     }
 }

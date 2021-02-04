@@ -2,7 +2,7 @@
 
 set -eux
 
-PROJ_NAME=$(cat Cargo.toml | grep -E "^name" | sed -E 's/name[[:space:]]=[[:space:]]"(.*)"/\1/g' | sed -E 's/-/_/g')
+PROJ_NAME=$(cat Cargo.toml | grep -E "^name" -m1 | sed -E 's/name[[:space:]]=[[:space:]]"(.*)"/\1/g' | sed -E 's/-/_/g')
 rm -rf target/debug/deps/${PROJ_NAME}-*
 
 export CARGO_INCREMENTAL=0

@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
+
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tui::{
@@ -11,8 +13,10 @@ use tui::{
 
 use crate::{
     event::LogEventEvent,
+    key_event_wrapper::KeyEventWrapper,
     state::{logevents_state::LogEventsState, search_state::SearchState},
     ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
+    utils::key_maps_stringify,
 };
 
 /// which component selected
@@ -263,6 +267,10 @@ where
             for (i, v) in self.event_areas.iter_mut().enumerate() {
                 v.draw(f, event_area_rects[i]);
             }
+            let mut maps: BTreeMap<KeyEventWrapper, String> = BTreeMap::new();
+            self.push_key_maps(&mut maps);
+            let maps_str = key_maps_stringify(&maps);
+            self.status_bar.update_text(&maps_str);
             self.status_bar.draw(f, base_chunks[1]);
         }
     }
@@ -357,6 +365,55 @@ where
         }
         true
     }
+
+    fn push_key_maps<'a>(
+        &self,
+        maps: &'a mut BTreeMap<KeyEventWrapper, String>,
+    ) -> &'a mut BTreeMap<KeyEventWrapper, String> {
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE)),
+            "Help".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)),
+            "Toggle side menu".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+            "Exit".to_string(),
+        );
+        match self.select_state {
+            SelectState::SideMenu => {
+                maps.insert(
+                    KeyEventWrapper::new(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+                    "Select log group".to_string(),
+                );
+                self.side_menu.push_key_maps(maps);
+            }
+            SelectState::EventAreas(idx) => {
+                if let Some(event_area) = self.event_areas.get(idx) {
+                    event_area.push_key_maps(maps);
+                }
+            }
+        }
+        maps
+    }
 }
 
 #[cfg(test)]
@@ -388,7 +445,7 @@ mod tests {
                 "│                            │                                                                      ",
                 "│                            │                                                                      ",
                 "└────────────────────────────┘                                                                      ",
-                "                                                                                     initial message",
+                "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
                 "                                                                                                    ",
             ]
         };
@@ -488,7 +545,7 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
-            "                                                                                     initial message",
+            "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
             "                                                                                                    ",
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 30, true);
@@ -503,7 +560,7 @@ mod tests {
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "└─┘└───────────────────────────────────────────────────────────────────────────────────────────────┘",
-            "                                                                                     initial message",
+            "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
             "                                                                                                    ",
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 3, true);
@@ -519,7 +576,7 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
-            "                                                                                     initial message",
+            "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
             "                                                                                                    ",
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30, true);

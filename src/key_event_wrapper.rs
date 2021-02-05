@@ -82,6 +82,12 @@ impl ToString for KeyEventWrapper {
                 }
             }
             KeyCode::Backspace => Some("BackSpace".to_string()),
+            KeyCode::Left => Some("←".to_string()),
+            KeyCode::Up => Some("↑".to_string()),
+            KeyCode::Right => Some("→".to_string()),
+            KeyCode::Down => Some("↓".to_string()),
+            KeyCode::Tab => Some("TAB".to_string()),
+            KeyCode::Enter => Some("ENTER".to_string()),
             _ => None,
         };
         let modifier = match self.inner.modifiers {

@@ -32,6 +32,10 @@ where
             _phantom: PhantomData,
         }
     }
+
+    pub fn update_text(&mut self, new_text: &str) {
+        self.state.lock().unwrap().message = new_text.to_string();
+    }
 }
 
 impl<B> Default for StatusBar<B>

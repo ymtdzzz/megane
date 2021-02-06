@@ -400,10 +400,6 @@ where
         );
         match self.select_state {
             SelectState::SideMenu => {
-                maps.insert(
-                    KeyEventWrapper::new(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
-                    "Select log group".to_string(),
-                );
                 self.side_menu.push_key_maps(maps);
             }
             SelectState::EventAreas(idx) => {
@@ -445,8 +441,8 @@ mod tests {
                 "│                            │                                                                      ",
                 "│                            │                                                                      ",
                 "└────────────────────────────┘                                                                      ",
-                "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
-                "                                                                                                    ",
+                "         [?]Help/[BackSpace]Incremental filtering (remove)/[C+Ctrl]Exit/[Chars]Incremental filtering",
+                "   (add)/[ENTER]Select log group/[TAB]Toggle side menu/[←]Move/[↑]Prev log group/[→]Move/[↓]Next log",
             ]
         };
         let mut expected = Buffer::with_lines(lines);
@@ -475,7 +471,8 @@ mod tests {
                     } else if x >= side_menu_length && header_exists {
                         ch.set_fg(Color::White);
                     }
-                } else if y == 8 {
+                } else if y == 8 || y == 9 {
+                    ch.set_fg(Color::Reset);
                 } else if ch.symbol != " " {
                     if x >= side_menu_length {
                         ch.set_fg(event_area_color);
@@ -545,8 +542,9 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
-            "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
-            "                                                                                                    ",
+            "         [?]Help/[BackSpace]Incremental filtering (remove)/[C+Ctrl]Exit/[Chars]Incremental filtering",
+            "   (add)/[ENTER]Select log group/[TAB]Toggle side menu/[←]Move/[↑]Prev log group/[→]Move/[↓]Next log",
+
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 30, true);
         // folding side menu
@@ -560,8 +558,8 @@ mod tests {
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "└─┘└───────────────────────────────────────────────────────────────────────────────────────────────┘",
-            "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
-            "                                                                                                    ",
+            "         [?]Help/[BackSpace]Incremental filtering (remove)/[C+Ctrl]Exit/[Chars]Incremental filtering",
+            "   (add)/[ENTER]Select log group/[TAB]Toggle side menu/[←]Move/[↑]Prev log group/[→]Move/[↓]Next log",
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 3, true);
         // event area selected
@@ -576,8 +574,9 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
-            "  ?: Help/C+Ctrl: Exit/ENTER: Select log group/TAB: Toggle side menu/←: Move/↑: Move/→: Move/↓: Move",
-            "                                                                                                    ",
+            " [?]Help/[C+Ctrl]Exit/[J]Next log event/[K]Prev log event/[S+Ctrl]Open search dialog/[TAB]Toggle log",
+            "                                                          event open/[←]Move/[↑]Move/[→]Move/[↓]Move",
+
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30, true);
         // help dialog

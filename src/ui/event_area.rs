@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
@@ -19,6 +20,7 @@ use tui::{
 use crate::{
     constant,
     event::LogEventEvent,
+    key_event_wrapper::KeyEventWrapper,
     loader::Loader,
     state::{
         logevents_state::LogEventsState,
@@ -305,6 +307,41 @@ where
             }
         }
         false
+    }
+
+    fn push_key_maps<'a>(
+        &self,
+        maps: &'a mut BTreeMap<KeyEventWrapper, String>,
+    ) -> &'a mut BTreeMap<KeyEventWrapper, String> {
+        if let Selection::Search = self.selection {
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
+                "Cancel search dialog".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+                "Confirm search dialog".to_string(),
+            );
+            self.search_condition_dialog.push_key_maps(maps);
+        } else {
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)),
+                "Toggle log event open".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)),
+                "Next log event".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE)),
+                "Prev log event".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL)),
+                "Open search dialog".to_string(),
+            );
+        }
+        maps
     }
 }
 

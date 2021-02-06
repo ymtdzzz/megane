@@ -55,12 +55,10 @@ impl Ord for KeyEventWrapper {
         }
         if self_str.len() == other_str.len() {
             Ordering::Equal
+        } else if self_is_longer {
+            Ordering::Less
         } else {
-            if self_is_longer {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
+            Ordering::Greater
         }
     }
 }
@@ -77,6 +75,8 @@ impl ToString for KeyEventWrapper {
             KeyCode::Char(c) => {
                 if c == ' ' {
                     Some("SPC".to_string())
+                } else if c == '*' {
+                    Some("Chars".to_string())
                 } else {
                     Some(c.to_uppercase().to_string())
                 }
@@ -88,6 +88,7 @@ impl ToString for KeyEventWrapper {
             KeyCode::Down => Some("↓".to_string()),
             KeyCode::Tab => Some("TAB".to_string()),
             KeyCode::Enter => Some("ENTER".to_string()),
+            KeyCode::Esc => Some("Esc".to_string()),
             _ => None,
         };
         let modifier = match self.inner.modifiers {
@@ -107,6 +108,13 @@ impl ToString for KeyEventWrapper {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_getter_fn() {
+        let input = KeyEventWrapper::new(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        assert_eq!(KeyCode::Enter, input.code());
+        assert_eq!(KeyModifiers::NONE, input.modifier());
+    }
+
     fn test_case_to_string(key_event: KeyEvent, expected: &str) {
         assert_eq!(
             expected.to_string(),
@@ -125,6 +133,8 @@ mod tests {
             KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE),
             "BackSpace",
         );
+        test_case_to_string(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE), "Esc");
+        test_case_to_string(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE), "");
     }
 
     #[test]

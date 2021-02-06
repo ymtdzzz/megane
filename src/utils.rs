@@ -17,7 +17,7 @@ pub fn key_maps_stringify(maps: &BTreeMap<KeyEventWrapper, String>) -> String {
     let mut datas = vec![];
     for (k, v) in maps.iter() {
         let key = k.to_string();
-        datas.push(format!("{}: {}", key, v));
+        datas.push(format!("[{}]{}", key, v));
     }
     datas.join("/")
 }
@@ -68,7 +68,7 @@ mod tests {
         );
         let result = key_maps_stringify(&input);
         let expected = String::from(
-            "BackSpace: test description 3/C: test description 4/C+Ctrl: test description 1/SPC: test description 2",
+            "[BackSpace]test description 3/[C]test description 4/[C+Ctrl]test description 1/[SPC]test description 2",
         );
         assert_eq!(expected, result);
     }

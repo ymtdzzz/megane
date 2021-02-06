@@ -1,11 +1,12 @@
 use std::{
+    collections::BTreeMap,
     fmt::{Display, Formatter, Result},
     marker::PhantomData,
 };
 
 use async_trait::async_trait;
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use lazy_static::lazy_static;
 use tui::{
     backend::Backend,
@@ -16,6 +17,7 @@ use tui::{
 
 use crate::{
     constant,
+    key_event_wrapper::KeyEventWrapper,
     state::search_state::*,
     ui::{textbox::TextBox, Drawable},
     utils::*,
@@ -426,6 +428,32 @@ where
         }
         true
     }
+
+    fn push_key_maps<'a>(
+        &self,
+        maps: &'a mut BTreeMap<KeyEventWrapper, String>,
+    ) -> &'a mut BTreeMap<KeyEventWrapper, String> {
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            "Move focus".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            "Move focus".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+            "Select the period".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)),
+            "Toggle period focus".to_string(),
+        );
+        self.query_input.push_key_maps(maps);
+        self.term_from.push_key_maps(maps);
+        self.term_to.push_key_maps(maps);
+        maps
+    }
 }
 
 #[cfg(test)]
@@ -434,7 +462,7 @@ mod tests {
     use tui::{backend::TestBackend, buffer::Buffer, style::Color};
 
     use super::*;
-    use crate::test_helper::get_test_terminal;
+    use crate::test_helper::{get_test_terminal, key_maps_test_case};
 
     #[test]
     fn test_radio_select() {
@@ -780,5 +808,31 @@ mod tests {
         let from = Utc.timestamp(from_timestamp.unwrap() / 1000, 0);
         let to = Utc.timestamp(to_timestamp.unwrap() / 1000, 0);
         assert_eq!(chrono::Duration::days(9), to - from);
+    }
+
+    #[test]
+    fn test_push_key_maps() {
+        let dialog: SearchConditionDialog<TestBackend> =
+            SearchConditionDialog::new(SearchState::default());
+        key_maps_test_case(
+            &dialog,
+            KeyEvent::new(KeyCode::Down, KeyModifiers::NONE),
+            "Move focus",
+        );
+        key_maps_test_case(
+            &dialog,
+            KeyEvent::new(KeyCode::Up, KeyModifiers::NONE),
+            "Move focus",
+        );
+        key_maps_test_case(
+            &dialog,
+            KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE),
+            "Select the period",
+        );
+        key_maps_test_case(
+            &dialog,
+            KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE),
+            "Toggle period focus",
+        );
     }
 }

@@ -18,13 +18,34 @@ lazy_static! {
     pub static ref LOADER: String = String::from("⣾⣽⣻⢿⡿⣟⣯⣷");
     pub static ref HELP_MESSAGE: String = String::from(
         r#"
-<Navigation>
-  [TAB]   - Toggle folding side menu
-  [Arrow] - Move focus 
+<Global>
+  [TAB]   - Close/open side menu
+  [Arrow] - Move focus
+  [?]     - Show/hide help
+  [C+Ctrl] - Exit
 
 <Side Menu>
+  [Up/Down] - Move cursor
+  [Enter] - Select log group
+  [WORD] - Incremental filtering (add)
+  [BackSpace] - Incremental filtering (remove)
 
 <Log Event>
+  [J/K] - Move cursor
+  [TAB] - Close/open current log event
+  [S+Ctrl] - Open search dialog
+
+<Search Dialog>
+  [Esc] - Cancel search dialog
+  [Enter] - Confirm search dialog and start to search with the new conditions
+  [Up/Down] - Move cursor
+  [Space] - Select the period
+  [TAB] - Toggle period input focus
+
+<Text Box>
+  [WORD] - Input text
+  [BackSpace] - Delete text
+  [Left/Right] - Move cursor
     "#
     );
 }

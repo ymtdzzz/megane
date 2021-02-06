@@ -1,6 +1,10 @@
+use std::collections::BTreeMap;
+
 use async_trait::async_trait;
 use crossterm::event::KeyEvent;
 use tui::{backend::Backend, layout::Rect, Frame};
+
+use crate::key_event_wrapper::KeyEventWrapper;
 
 pub mod event_area;
 pub mod help;
@@ -21,4 +25,12 @@ where
     /// handles input key event
     /// and returns if parent component should handle other events or not
     async fn handle_event(&mut self, event: KeyEvent) -> bool;
+
+    /// push the key mappings for this component
+    fn push_key_maps<'a>(
+        &self,
+        maps: &'a mut BTreeMap<KeyEventWrapper, String>,
+    ) -> &'a mut BTreeMap<KeyEventWrapper, String> {
+        maps
+    }
 }

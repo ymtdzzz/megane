@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
+
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tui::{
@@ -11,8 +13,10 @@ use tui::{
 
 use crate::{
     event::LogEventEvent,
+    key_event_wrapper::KeyEventWrapper,
     state::{logevents_state::LogEventsState, search_state::SearchState},
     ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
+    utils::key_maps_stringify,
 };
 
 /// which component selected
@@ -263,6 +267,10 @@ where
             for (i, v) in self.event_areas.iter_mut().enumerate() {
                 v.draw(f, event_area_rects[i]);
             }
+            let mut maps: BTreeMap<KeyEventWrapper, String> = BTreeMap::new();
+            self.push_key_maps(&mut maps);
+            let maps_str = key_maps_stringify(&maps);
+            self.status_bar.update_text(&maps_str);
             self.status_bar.draw(f, base_chunks[1]);
         }
     }
@@ -357,6 +365,51 @@ where
         }
         true
     }
+
+    fn push_key_maps<'a>(
+        &self,
+        maps: &'a mut BTreeMap<KeyEventWrapper, String>,
+    ) -> &'a mut BTreeMap<KeyEventWrapper, String> {
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE)),
+            "Help".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)),
+            "Toggle side menu".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            "Move".to_string(),
+        );
+        maps.insert(
+            KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+            "Exit".to_string(),
+        );
+        match self.select_state {
+            SelectState::SideMenu => {
+                self.side_menu.push_key_maps(maps);
+            }
+            SelectState::EventAreas(idx) => {
+                if let Some(event_area) = self.event_areas.get(idx) {
+                    event_area.push_key_maps(maps);
+                }
+            }
+        }
+        maps
+    }
 }
 
 #[cfg(test)]
@@ -388,8 +441,8 @@ mod tests {
                 "│                            │                                                                      ",
                 "│                            │                                                                      ",
                 "└────────────────────────────┘                                                                      ",
-                "                                                                                     initial message",
-                "                                                                                                    ",
+                "         [?]Help/[BackSpace]Incremental filtering (remove)/[C+Ctrl]Exit/[Chars]Incremental filtering",
+                "   (add)/[ENTER]Select log group/[TAB]Toggle side menu/[←]Move/[↑]Prev log group/[→]Move/[↓]Next log",
             ]
         };
         let mut expected = Buffer::with_lines(lines);
@@ -418,7 +471,8 @@ mod tests {
                     } else if x >= side_menu_length && header_exists {
                         ch.set_fg(Color::White);
                     }
-                } else if y == 8 {
+                } else if y == 8 || y == 9 {
+                    ch.set_fg(Color::Reset);
                 } else if ch.symbol != " " {
                     if x >= side_menu_length {
                         ch.set_fg(event_area_color);
@@ -488,8 +542,9 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
-            "                                                                                     initial message",
-            "                                                                                                    ",
+            "         [?]Help/[BackSpace]Incremental filtering (remove)/[C+Ctrl]Exit/[Chars]Incremental filtering",
+            "   (add)/[ENTER]Select log group/[TAB]Toggle side menu/[←]Move/[↑]Prev log group/[→]Move/[↓]Next log",
+
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 30, true);
         // folding side menu
@@ -503,8 +558,8 @@ mod tests {
             "│ ││                                                                                               │",
             "│ ││                                                                                               │",
             "└─┘└───────────────────────────────────────────────────────────────────────────────────────────────┘",
-            "                                                                                     initial message",
-            "                                                                                                    ",
+            "         [?]Help/[BackSpace]Incremental filtering (remove)/[C+Ctrl]Exit/[Chars]Incremental filtering",
+            "   (add)/[ENTER]Select log group/[TAB]Toggle side menu/[←]Move/[↑]Prev log group/[→]Move/[↓]Next log",
         ];
         test_case(&mut app, Color::Yellow, Color::White, lines, 3, true);
         // event area selected
@@ -519,8 +574,9 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
-            "                                                                                     initial message",
-            "                                                                                                    ",
+            " [?]Help/[C+Ctrl]Exit/[J]Next log event/[K]Prev log event/[S+Ctrl]Open search dialog/[TAB]Toggle log",
+            "                                                          event open/[←]Move/[↑]Move/[→]Move/[↓]Move",
+
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30, true);
         // help dialog

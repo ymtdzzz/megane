@@ -1,10 +1,11 @@
 use std::{
+    collections::BTreeMap,
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
 use async_trait::async_trait;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tui::{
     backend::Backend,
     layout::Rect,
@@ -13,7 +14,10 @@ use tui::{
     Frame,
 };
 
-use crate::{constant, loader::Loader, state::loggroups_state::LogGroupsState, ui::Drawable};
+use crate::{
+    constant, key_event_wrapper::KeyEventWrapper, loader::Loader,
+    state::loggroups_state::LogGroupsState, ui::Drawable,
+};
 
 pub struct SideMenu<B>
 where
@@ -143,6 +147,35 @@ where
             }
         }
         false
+    }
+
+    fn push_key_maps<'a>(
+        &self,
+        maps: &'a mut BTreeMap<KeyEventWrapper, String>,
+    ) -> &'a mut BTreeMap<KeyEventWrapper, String> {
+        if self.is_selected {
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Char('*'), KeyModifiers::NONE)),
+                "Incremental filtering (add)".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+                "Incremental filtering (remove)".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+                "Prev log group".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+                "Next log group".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+                "Select log group".to_string(),
+            );
+        }
+        maps
     }
 }
 

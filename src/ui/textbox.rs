@@ -1,7 +1,7 @@
-use std::marker::PhantomData;
+use std::{collections::BTreeMap, marker::PhantomData};
 
 use async_trait::async_trait;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tui::{
     backend::Backend,
     layout::Rect,
@@ -9,7 +9,7 @@ use tui::{
     Frame,
 };
 
-use crate::{constant, ui::Drawable};
+use crate::{constant, key_event_wrapper::KeyEventWrapper, ui::Drawable};
 
 pub struct TextBox<B>
 where
@@ -122,6 +122,27 @@ where
             false
         }
     }
+
+    fn push_key_maps<'a>(
+        &self,
+        maps: &'a mut BTreeMap<KeyEventWrapper, String>,
+    ) -> &'a mut BTreeMap<KeyEventWrapper, String> {
+        if self.is_selected {
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+                "Move cursor".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+                "Move cursor".to_string(),
+            );
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+                "Delete char".to_string(),
+            );
+        }
+        maps
+    }
 }
 
 #[cfg(test)]
@@ -130,7 +151,7 @@ mod tests {
     use tui::{backend::TestBackend, buffer::Buffer, style::Color};
 
     use super::*;
-    use crate::test_helper::get_test_terminal;
+    use crate::test_helper::{get_test_terminal, key_maps_test_case};
 
     fn test_case(textbox: &mut TextBox<TestBackend>, expected: Buffer) {
         let mut terminal = get_test_terminal(20, 3);
@@ -252,5 +273,31 @@ mod tests {
         );
         assert_eq!("inpt".to_string(), textbox.get_input());
         assert_eq!(3, textbox.cursor);
+    }
+
+    #[test]
+    fn test_push_key_maps() {
+        // selected
+        let textbox: TextBox<TestBackend> = TextBox::new(true);
+        key_maps_test_case(
+            &textbox,
+            KeyEvent::new(KeyCode::Left, KeyModifiers::NONE),
+            "Move cursor",
+        );
+        key_maps_test_case(
+            &textbox,
+            KeyEvent::new(KeyCode::Right, KeyModifiers::NONE),
+            "Move cursor",
+        );
+        key_maps_test_case(
+            &textbox,
+            KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE),
+            "Delete char",
+        );
+        // not selected
+        let textbox: TextBox<TestBackend> = TextBox::new(false);
+        let mut maps: BTreeMap<KeyEventWrapper, String> = BTreeMap::new();
+        textbox.push_key_maps(&mut maps);
+        assert!(maps.is_empty())
     }
 }

@@ -8,6 +8,7 @@ pub mod client;
 pub mod constant;
 pub mod event;
 pub mod handler;
+pub mod key_event_wrapper;
 pub mod loader;
 pub mod logevents;
 pub mod loggroups;

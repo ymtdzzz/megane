@@ -1,10 +1,13 @@
+use std::collections::BTreeMap;
+
+use crossterm::event::KeyEvent;
 use rusoto_logs::{CloudWatchLogsClient, FilteredLogEvent, LogGroup};
 use rusoto_mock::{
     MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
 };
 use tui::{backend::TestBackend, Terminal};
 
-use crate::constant::*;
+use crate::{constant::*, key_event_wrapper::KeyEventWrapper, ui::Drawable};
 
 #[cfg(test)]
 pub fn get_mock_client(filename: &str) -> CloudWatchLogsClient {
@@ -72,4 +75,16 @@ pub fn get_events(from: usize, to: usize) -> Vec<FilteredLogEvent> {
 pub fn get_test_terminal(width: u16, height: u16) -> Terminal<TestBackend> {
     let backend = TestBackend::new(width, height);
     Terminal::new(backend).unwrap()
+}
+
+pub fn key_maps_test_case<D>(component: &D, key_event: KeyEvent, expected: &str)
+where
+    D: Drawable<TestBackend>,
+{
+    let mut maps: BTreeMap<KeyEventWrapper, String> = BTreeMap::new();
+    component.push_key_maps(&mut maps);
+    assert_eq!(
+        &expected.to_string(),
+        maps.get(&KeyEventWrapper::new(key_event)).unwrap(),
+    );
 }

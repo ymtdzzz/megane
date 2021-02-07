@@ -1,4 +1,14 @@
-#  (2021-02-06)
+#  (2021-02-07)
+
+
+
+## [0.0.5](/compare/0.0.4...0.0.5) (2021-02-07)
+
+
+### Features
+
+* **cli:** support using assumed role (#36) 0bde4ed
+* **cli:** support using specific AWS profile and region (#35) 83c1177
 
 
 

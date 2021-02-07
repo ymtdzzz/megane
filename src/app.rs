@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use log::info;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tui::{

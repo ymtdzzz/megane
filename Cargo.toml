@@ -23,6 +23,8 @@ rusoto_core = "0.45.0"
 rusoto_cloudwatch = "0.45.0"
 rusoto_logs = "0.45.0"
 rusoto_credential = "0.45.0"
+rusoto_sts = "0.45.0"
+rusoto_iam = "0.45.0"
 tokio = { version = "0.2.22", features = ["full"] }
 async-trait = "0.1.40"
 chrono = "0.4.15"

@@ -45,7 +45,7 @@ impl EventHandler for InputEventHandler {
         let end_for = Duration::from_millis(120);
         loop {
             // KeyEvent handling
-            if event::poll(self.tick_rate - last_tick.elapsed())? {
+            if event::poll(self.tick_rate.saturating_sub(last_tick.elapsed()))? {
                 if let CEvent::Key(key) = event::read()? {
                     self.input_tx.send(Event::Input(key)).await?;
                 }

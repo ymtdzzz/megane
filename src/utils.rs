@@ -1,8 +1,28 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::FromStr};
 
+use anyhow::Result;
+use rusoto_core::{request::HttpClient, Region};
+use rusoto_credential::ProfileProvider;
+use rusoto_logs::CloudWatchLogsClient;
 use tui::layout::Rect;
 
 use crate::key_event_wrapper::KeyEventWrapper;
+
+pub fn get_aws_client(profile: Option<&str>, region: Option<&str>) -> Result<CloudWatchLogsClient> {
+    let region = if let Some(r) = region {
+        Region::from_str(r)?
+    } else {
+        Region::default()
+    };
+    if let Some(p) = profile {
+        let provider = ProfileProvider::with_default_credentials(p)?;
+        let dispatcher = HttpClient::new()?;
+        Ok(CloudWatchLogsClient::new_with(dispatcher, provider, region))
+    } else {
+        // using default profile
+        Ok(CloudWatchLogsClient::new(region))
+    }
+}
 
 pub fn get_inner_area(area: &Rect) -> Rect {
     let mut area_cloned = *area;

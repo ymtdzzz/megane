@@ -68,14 +68,36 @@ async fn main() -> Result<()> {
                 .takes_value(true)
                 .help("Specific AWS region. If not provided, default region will be used."),
         )
+        .arg(
+            Arg::with_name("role_arn")
+                .required(false)
+                .long("role_arn")
+                .short("a")
+                .takes_value(true)
+                .help("The role arn you want to assume."),
+        )
+        .arg(
+            Arg::with_name("role_name")
+                .required(false)
+                .long("role_name")
+                .short("n")
+                .takes_value(true)
+                .help("The role name you want to assume. Ensure that your current credential is allowed to action 'iam:GetRole'"),
+        )
         .get_matches();
 
-    // setup terminal
-    let mut terminal = setup_terminal()?;
     // setup states and client
     //let aws_client = CloudWatchLogsClient::new(Region::ApNortheast1);
-    let aws_client = get_aws_client(clap.value_of("profile"), clap.value_of("region"))?;
+    let aws_client = get_aws_client(
+        clap.value_of("profile"),
+        clap.value_of("region"),
+        clap.value_of("role_name"),
+        clap.value_of("role_arn"),
+    )
+    .await?;
     let log_client = LogClient::new(aws_client);
+    // setup terminal
+    let mut terminal = setup_terminal()?;
     let loggroup_state = Arc::new(Mutex::new(LogGroupsState::new()));
     let status_bar_state = Arc::new(Mutex::new(StatusBarState::new(HELP_INSTRUCTION.clone())));
     let logevent_states = [

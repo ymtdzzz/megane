@@ -3,24 +3,93 @@ use std::{collections::BTreeMap, str::FromStr};
 use anyhow::Result;
 use rusoto_core::{request::HttpClient, Region};
 use rusoto_credential::ProfileProvider;
+use rusoto_iam::{GetRoleRequest, Iam, IamClient};
 use rusoto_logs::CloudWatchLogsClient;
+use rusoto_sts::{StsAssumeRoleSessionCredentialsProvider, StsClient};
 use tui::layout::Rect;
 
 use crate::key_event_wrapper::KeyEventWrapper;
 
-pub fn get_aws_client(profile: Option<&str>, region: Option<&str>) -> Result<CloudWatchLogsClient> {
+pub async fn get_aws_client(
+    profile: Option<&str>,
+    region: Option<&str>,
+    role_name: Option<&str>,
+    role_arn: Option<&str>,
+) -> Result<CloudWatchLogsClient> {
     let region = if let Some(r) = region {
         Region::from_str(r)?
     } else {
         Region::default()
     };
-    if let Some(p) = profile {
-        let provider = ProfileProvider::with_default_credentials(p)?;
-        let dispatcher = HttpClient::new()?;
-        Ok(CloudWatchLogsClient::new_with(dispatcher, provider, region))
+    let mut assumed_provider = None;
+
+    if let Some(arn) = role_arn {
+        // If role_arn provided, assume the role
+        let sts_client = StsClient::new_with(
+            HttpClient::new()?,
+            get_aws_provider(profile)?,
+            region.clone(),
+        );
+        assumed_provider = Some(StsAssumeRoleSessionCredentialsProvider::new(
+            sts_client,
+            arn.to_string(),
+            String::from("megane"),
+            None,
+            None,
+            None,
+            None,
+        ));
+    } else if let Some(name) = role_name {
+        // If role_name provided, get the role's arn by its name and assume
+        let iam_client = IamClient::new_with(
+            HttpClient::new()?,
+            get_aws_provider(profile)?,
+            Region::UsEast1,
+        );
+        println!("Role name detected. Fetching the role data...");
+        let arn = iam_client
+            .get_role(GetRoleRequest {
+                role_name: name.to_string(),
+            })
+            .await?
+            .role
+            .arn;
+        println!("Completed to fetch the role's arn.");
+        let sts_client = StsClient::new_with(
+            HttpClient::new()?,
+            get_aws_provider(profile)?,
+            region.clone(),
+        );
+        assumed_provider = Some(StsAssumeRoleSessionCredentialsProvider::new(
+            sts_client,
+            arn,
+            String::from("megane"),
+            None,
+            None,
+            None,
+            None,
+        ));
+    }
+    if let Some(ap) = assumed_provider {
+        Ok(CloudWatchLogsClient::new_with(
+            HttpClient::new()?,
+            ap,
+            region,
+        ))
     } else {
-        // using default profile
-        Ok(CloudWatchLogsClient::new(region))
+        Ok(CloudWatchLogsClient::new_with(
+            HttpClient::new()?,
+            get_aws_provider(profile)?,
+            region,
+        ))
+    }
+}
+
+fn get_aws_provider(profile: Option<&str>) -> Result<ProfileProvider> {
+    if let Some(p) = profile {
+        Ok(ProfileProvider::with_default_credentials(p)?)
+    } else {
+        Ok(ProfileProvider::new()?)
     }
 }
 

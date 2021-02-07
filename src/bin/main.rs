@@ -39,15 +39,6 @@ use megane::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // setup logging
-    let logfile = FileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{l} - {m}\n")))
-        .build("log/output.log")?;
-    let config = Config::builder()
-        .appender(Appender::builder().build("logfile", Box::new(logfile)))
-        .build(Root::builder().appender("logfile").build(LevelFilter::Info))?;
-    log4rs::init_config(config)?;
-
     let clap = ClapApp::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())
@@ -84,7 +75,30 @@ async fn main() -> Result<()> {
                 .takes_value(true)
                 .help("The role name you want to assume. Ensure that your current credential is allowed to action 'iam:GetRole'"),
         )
+        .arg(
+            Arg::with_name("debug_mode")
+                .required(false)
+                .long("debug")
+                .short("d")
+                .help("Debug mode. Events will be written to ./log/output.log ."),
+        )
         .get_matches();
+
+    // setup logging
+    if clap.is_present("debug_mode") {
+        let logfile = FileAppender::builder()
+            .encoder(Box::new(PatternEncoder::new(
+                "{l}[{d(%Y-%m-%d %H:%M:%S)}] - {m}\n",
+            )))
+            .build("log/output.log")?;
+        let config = Config::builder()
+            .appender(Appender::builder().build("logfile", Box::new(logfile)))
+            .build(Root::builder().appender("logfile").build(LevelFilter::Info))?;
+        log4rs::init_config(config)?;
+        std::panic::set_hook(Box::new(|_panic_info| {
+            log::error!("{:?}", backtrace::Backtrace::new());
+        }));
+    }
 
     // setup states and client
     //let aws_client = CloudWatchLogsClient::new(Region::ApNortheast1);

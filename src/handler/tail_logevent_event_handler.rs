@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use log::info;
 use tokio::sync::mpsc;
 
 use super::*;
@@ -41,6 +42,7 @@ impl EventHandler for TailLogEventEventHandler {
         while let Some(event) = self.inst_rx.recv().await {
             match event {
                 TailLogEventEvent::Start(gname, token, conditions, _need_reset) => {
+                    info!("Tail mode start to fetch");
                     if let Some(search_state) = conditions {
                         self.current_search_condition = search_state.clone();
                     }
@@ -50,6 +52,7 @@ impl EventHandler for TailLogEventEventHandler {
                     self.tail_mode = true;
                 }
                 TailLogEventEvent::Stop => {
+                    info!("Tail mode stop fetching");
                     self.tail_mode = false;
                     self.state.lock().unwrap().reset();
                 }

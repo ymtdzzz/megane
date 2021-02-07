@@ -8,15 +8,13 @@ use std::{
 };
 
 use anyhow::Result;
-use clap::{crate_authors, crate_description, crate_name, crate_version, App as ClapApp};
+use clap::{crate_authors, crate_description, crate_name, crate_version, App as ClapApp, Arg};
 use log::*;
 use log4rs::{
     append::file::FileAppender,
     config::{Appender, Config, Root},
     encode::pattern::PatternEncoder,
 };
-use rusoto_core::Region;
-use rusoto_logs::CloudWatchLogsClient;
 use tokio::sync::mpsc;
 use tui::backend::CrosstermBackend;
 
@@ -36,6 +34,7 @@ use megane::{
     },
     terminal::*,
     ui::{side_menu::SideMenu, status_bar::StatusBar},
+    utils::get_aws_client,
 };
 
 #[tokio::main]
@@ -49,17 +48,33 @@ async fn main() -> Result<()> {
         .build(Root::builder().appender("logfile").build(LevelFilter::Info))?;
     log4rs::init_config(config)?;
 
-    let _clap = ClapApp::new(crate_name!())
+    let clap = ClapApp::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())
         .about(crate_description!())
+        .arg(
+            Arg::with_name("profile")
+                .required(false)
+                .long("profile")
+                .short("p")
+                .takes_value(true)
+                .help("Specific AWS profile. If not provided, default profile will be used."),
+        )
+        .arg(
+            Arg::with_name("region")
+                .required(false)
+                .long("region")
+                .short("r")
+                .takes_value(true)
+                .help("Specific AWS region. If not provided, default region will be used."),
+        )
         .get_matches();
 
     // setup terminal
     let mut terminal = setup_terminal()?;
-
     // setup states and client
-    let aws_client = CloudWatchLogsClient::new(Region::ApNortheast1);
+    //let aws_client = CloudWatchLogsClient::new(Region::ApNortheast1);
+    let aws_client = get_aws_client(clap.value_of("profile"), clap.value_of("region"))?;
     let log_client = LogClient::new(aws_client);
     let loggroup_state = Arc::new(Mutex::new(LogGroupsState::new()));
     let status_bar_state = Arc::new(Mutex::new(StatusBarState::new(HELP_INSTRUCTION.clone())));

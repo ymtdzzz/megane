@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use log::info;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tui::{
@@ -14,7 +15,10 @@ use tui::{
 use crate::{
     event::LogEventEvent,
     key_event_wrapper::KeyEventWrapper,
-    state::{logevents_state::LogEventsState, search_state::SearchState},
+    state::{
+        logevents_state::LogEventsState,
+        search_state::{SearchMode, SearchState},
+    },
     ui::{event_area::EventArea, help::Help, side_menu::SideMenu, status_bar::StatusBar, Drawable},
     utils::key_maps_stringify,
 };
@@ -353,10 +357,18 @@ where
                                 .send(LogEventEvent::FetchLogEvents(
                                     i.to_string(),
                                     None,
-                                    Some(SearchState::default()),
+                                    Some(SearchState::new(String::default(), SearchMode::Tail)),
                                     true,
                                 ))
                                 .await;
+                            log::info!("A new log group added, sended an event below to LogEventEventHandler thread.\n{:?}",
+                                  LogEventEvent::FetchLogEvents(
+                                      i.to_string(),
+                                      None,
+                                      Some(SearchState::new(String::default(), SearchMode::Tail)),
+                                      true,
+                                  )
+                            );
                         }
                     }
                 }

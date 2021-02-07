@@ -1,4 +1,5 @@
 #![warn(rust_2018_idioms)]
+#![feature(duration_saturating_ops)]
 
 #[cfg(test)]
 pub mod test_helper;

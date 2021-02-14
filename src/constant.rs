@@ -31,6 +31,7 @@ lazy_static! {
   [BackSpace] - Incremental filtering (remove)
 
 <Log Event>
+  [Enter] - Copy the selected log event to clipboard
   [J/K] - Move cursor
   [TAB] - Close/open current log event
   [S+Ctrl] - Open search dialog

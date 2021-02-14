@@ -6,6 +6,7 @@ use std::{
 
 use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone};
+use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use lazy_static::lazy_static;
 use tokio::sync::mpsc;
@@ -249,6 +250,27 @@ where
                     }
                 } else {
                     match event.code {
+                        KeyCode::Enter => {
+                            if let Ok(s) = state {
+                                if let Some(idx) = s.state.selected() {
+                                    let context: Result<
+                                        ClipboardContext,
+                                        Box<dyn std::error::Error>,
+                                    > = ClipboardProvider::new();
+                                    match context {
+                                        Ok(mut ctx) => {
+                                            if let Some(text) = s.events.get_message(idx) {
+                                                ctx.set_contents(text.clone()).unwrap_or_else(|e| { log::warn!("Failed to write log event message to ClipboardContext: {}", e) });
+                                                log::info!("Log event message has been written to Clipboard. \nlog event: \n{}", &text);
+                                            }
+                                        }
+                                        Err(e) => {
+                                            log::warn!("Failed to get ClipboardContext: {}", e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         KeyCode::Tab => {
                             if let Ok(mut s) = state {
                                 if let Some(idx) = s.state.selected() {
@@ -324,6 +346,10 @@ where
             );
             self.search_condition_dialog.push_key_maps(maps);
         } else {
+            maps.insert(
+                KeyEventWrapper::new(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+                "Copy to clipboard".to_string(),
+            );
             maps.insert(
                 KeyEventWrapper::new(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)),
                 "Toggle log event open".to_string(),

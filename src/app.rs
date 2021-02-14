@@ -585,8 +585,9 @@ mod tests {
             "│                            ││                                                                    │",
             "│                            ││                                                                    │",
             "└────────────────────────────┘└────────────────────────────────────────────────────────────────────┘",
-            " [?]Help/[C+Ctrl]Exit/[J]Next log event/[K]Prev log event/[S+Ctrl]Open search dialog/[TAB]Toggle log",
-            "                                                          event open/[←]Move/[↑]Move/[→]Move/[↓]Move",
+            "      [?]Help/[C+Ctrl]Exit/[ENTER]Copy to clipboard/[J]Next log event/[K]Prev log event/[S+Ctrl]Open",
+            "                            search dialog/[TAB]Toggle log event open/[←]Move/[↑]Move/[→]Move/[↓]Move",
+
 
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30, true);

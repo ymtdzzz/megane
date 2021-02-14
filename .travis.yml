@@ -7,6 +7,8 @@ install:
 - rustup default nightly
 - rustup component add clippy
 - cargo install grcov rust-covfix
+- sudo apt-get update
+- sudo apt-get install -y xorg-dev libxcb-shape0-dev libxcb-xfixes0-dev
 jobs:
   include:
   - stage: test and format check
@@ -26,7 +28,6 @@ jobs:
     services:
       - docker
     before_script:
-      - sudo apt-get update
       - sudo apt-get install -y mingw-w64 clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev zip unzip
       - bash ./build/osxcross_setup.sh
       - rustup target add x86_64-unknown-linux-gnu x86_64-apple-darwin x86_64-pc-windows-gnu

@@ -27,7 +27,7 @@ jobs:
       - docker
     before_script:
       - sudo apt-get update
-      - sudo apt-get install -y mingw-w64 clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev zip unzip
+      - sudo apt-get install -y mingw-w64 clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev zip unzip xorg-dev
       - bash ./build/osxcross_setup.sh
       - rustup target add x86_64-unknown-linux-gnu x86_64-apple-darwin x86_64-pc-windows-gnu
     script:

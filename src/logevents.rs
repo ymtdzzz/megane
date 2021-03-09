@@ -1,3 +1,4 @@
+use log::info;
 use rusoto_logs::FilteredLogEvent;
 
 use super::constant::*;
@@ -77,6 +78,9 @@ impl LogEvents {
     }
 
     pub fn push_items(&mut self, items: &mut Vec<FilteredLogEvent>, open_all: bool) {
+        info!("push items --");
+        info!("before: {:?}", self.items);
+        info!("items to push: {:?}", items);
         let mut idx: Option<usize> = None;
         // Skip the duplicate items.
         for (i, val) in items.iter().enumerate() {
@@ -107,6 +111,7 @@ impl LogEvents {
                 }
             }
         }
+        info!("after: {:?}", self.items);
     }
 
     pub fn has_items(&self) -> bool {

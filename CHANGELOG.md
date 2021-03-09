@@ -1,4 +1,21 @@
-#  (2021-02-07)
+#  (2021-03-09)
+
+
+
+## [0.0.7](/compare/0.0.6...0.0.7) (2021-03-09)
+
+
+### Bug Fixes
+
+* **handler:** c key doesn't respond (#47), closes #41
+* **key-mapping:** change key for closing help dialog from `?` to `q` (#55), closes #44
+* **log-event:** fix an unexpected state reset (#57), closes #56
+* **ui:** display the date format for custom period (#54), #43
+
+
+### Features
+
+* **event_area:** copy log event to clipboard (#48), closes #45
 
 
 

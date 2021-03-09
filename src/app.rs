@@ -123,8 +123,8 @@ where
         self.fold = !self.fold;
     }
 
-    pub fn toggle_show_help(&mut self) {
-        self.show_help = !self.show_help;
+    pub fn toggle_show_help(&mut self, is_show: bool) {
+        self.show_help = is_show;
     }
 
     pub fn rotate_select_state(&mut self, key: KeyCode) {
@@ -279,99 +279,103 @@ where
     }
 
     async fn handle_event(&mut self, event: KeyEvent) -> bool {
-        let solved = match self.select_state {
-            SelectState::SideMenu => self.side_menu.handle_event(event).await,
-            SelectState::EventAreas(idx) => {
-                if let Some(event_area) = self.event_areas.get_mut(idx) {
-                    event_area.handle_event(event).await
-                } else {
-                    false
-                }
-            }
-        };
-        if !solved {
-            match event.code {
-                KeyCode::Char('?') => {
-                    self.toggle_show_help();
-                }
-                KeyCode::Tab => {
-                    self.toggle_side_fold();
-                }
-                KeyCode::Right => {
-                    self.rotate_select_state(KeyCode::Right);
-                }
-                KeyCode::Up => {
-                    self.rotate_select_state(KeyCode::Up);
-                }
-                KeyCode::Left => {
-                    self.rotate_select_state(KeyCode::Left);
-                }
-                KeyCode::Down => {
-                    self.rotate_select_state(KeyCode::Down);
-                }
-                KeyCode::Enter => {
-                    if let SelectState::SideMenu = self.select_state {
-                        // log group selection updated
-                        let current_log_groups = self
-                            .event_areas
-                            .iter()
-                            .map(|i| i.log_group_name())
-                            .collect::<Vec<&str>>();
-                        let log_groups_to_create = self
-                            .side_menu
-                            .selected_log_groups()
-                            .iter()
-                            .filter(|group| !current_log_groups.contains(&group.as_str()))
-                            .collect::<Vec<&String>>();
-                        let mut idx_to_remove = vec![];
-                        current_log_groups
-                            .iter()
-                            .enumerate()
-                            .for_each(|(i, group)| {
-                                if !self
-                                    .side_menu
-                                    .selected_log_groups()
-                                    .contains(&group.to_string())
-                                {
-                                    idx_to_remove.push(i);
-                                }
-                            });
-                        for i in idx_to_remove {
-                            if self.event_areas.len() > i {
-                                self.event_areas.remove(i);
-                                self.logevent_states[i].lock().unwrap().reset();
-                                self.free_idx[i] = true;
-                            }
-                        }
-                        for i in log_groups_to_create {
-                            let idx = self.get_next_idx().unwrap();
-                            self.free_idx[idx] = false;
-                            let state = Arc::clone(&self.logevent_states[idx]);
-                            self.event_areas.push(EventArea::new(
-                                i,
-                                state,
-                                mpsc::Sender::clone(&self.logevent_inst_txs[idx]),
-                            ));
-                            let _ = self.logevent_inst_txs[idx]
-                                .send(LogEventEvent::FetchLogEvents(
-                                    i.to_string(),
-                                    None,
-                                    Some(SearchState::new(String::default(), SearchMode::Tail)),
-                                    true,
-                                ))
-                                .await;
-                            log::info!("A new log group added, sended an event below to LogEventEventHandler thread.\n{:?}",
-                                  LogEventEvent::FetchLogEvents(
-                                      i.to_string(),
-                                      None,
-                                      Some(SearchState::new(String::default(), SearchMode::Tail)),
-                                      true,
-                                  )
-                            );
-                        }
+        if let KeyCode::Char('q') = event.code {
+            self.toggle_show_help(false);
+        } else {
+            let solved = match self.select_state {
+                SelectState::SideMenu => self.side_menu.handle_event(event).await,
+                SelectState::EventAreas(idx) => {
+                    if let Some(event_area) = self.event_areas.get_mut(idx) {
+                        event_area.handle_event(event).await
+                    } else {
+                        false
                     }
                 }
-                _ => {}
+            };
+            if !solved {
+                match event.code {
+                    KeyCode::Char('?') => {
+                        self.toggle_show_help(true);
+                    }
+                    KeyCode::Tab => {
+                        self.toggle_side_fold();
+                    }
+                    KeyCode::Right => {
+                        self.rotate_select_state(KeyCode::Right);
+                    }
+                    KeyCode::Up => {
+                        self.rotate_select_state(KeyCode::Up);
+                    }
+                    KeyCode::Left => {
+                        self.rotate_select_state(KeyCode::Left);
+                    }
+                    KeyCode::Down => {
+                        self.rotate_select_state(KeyCode::Down);
+                    }
+                    KeyCode::Enter => {
+                        if let SelectState::SideMenu = self.select_state {
+                            // log group selection updated
+                            let current_log_groups = self
+                                .event_areas
+                                .iter()
+                                .map(|i| i.log_group_name())
+                                .collect::<Vec<&str>>();
+                            let log_groups_to_create = self
+                                .side_menu
+                                .selected_log_groups()
+                                .iter()
+                                .filter(|group| !current_log_groups.contains(&group.as_str()))
+                                .collect::<Vec<&String>>();
+                            let mut idx_to_remove = vec![];
+                            current_log_groups
+                                .iter()
+                                .enumerate()
+                                .for_each(|(i, group)| {
+                                    if !self
+                                        .side_menu
+                                        .selected_log_groups()
+                                        .contains(&group.to_string())
+                                    {
+                                        idx_to_remove.push(i);
+                                    }
+                                });
+                            for i in idx_to_remove {
+                                if self.event_areas.len() > i {
+                                    self.event_areas.remove(i);
+                                    self.logevent_states[i].lock().unwrap().reset();
+                                    self.free_idx[i] = true;
+                                }
+                            }
+                            for i in log_groups_to_create {
+                                let idx = self.get_next_idx().unwrap();
+                                self.free_idx[idx] = false;
+                                let state = Arc::clone(&self.logevent_states[idx]);
+                                self.event_areas.push(EventArea::new(
+                                    i,
+                                    state,
+                                    mpsc::Sender::clone(&self.logevent_inst_txs[idx]),
+                                ));
+                                let _ = self.logevent_inst_txs[idx]
+                                    .send(LogEventEvent::FetchLogEvents(
+                                        i.to_string(),
+                                        None,
+                                        Some(SearchState::new(String::default(), SearchMode::Tail)),
+                                        true,
+                                    ))
+                                    .await;
+                                log::info!("A new log group added, sended an event below to LogEventEventHandler thread.\n{:?}",
+                                           LogEventEvent::FetchLogEvents(
+                                               i.to_string(),
+                                               None,
+                                               Some(SearchState::new(String::default(), SearchMode::Tail)),
+                                               true,
+                                           )
+                                );
+                            }
+                        }
+                    }
+                    _ => {}
+                }
             }
         }
         true
@@ -592,7 +596,7 @@ mod tests {
         ];
         test_case(&mut app, Color::White, Color::Yellow, lines, 30, true);
         // help dialog
-        app.toggle_show_help();
+        app.toggle_show_help(true);
         let lines = vec![
             "┌HELP──────────────────────────────────────────────────────────────────────────────────────────────┐",
             "│                                                                                                  │",

@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use log::info;
 use tokio::sync::mpsc;
 
 use super::*;
@@ -37,12 +38,15 @@ impl LogEventEventHandler {
 #[async_trait]
 impl EventHandler for LogEventEventHandler {
     async fn run(&mut self) -> Result<()> {
+        let mut is_tail = false;
         loop {
             if let Some(event) = self.inst_rx.recv().await {
                 match event {
                     LogEventEvent::FetchLogEvents(gname, token, conditions, need_reset) => {
+                        info!("fetch log events - gname: {:?}, token: {:?}, conditions: {:?}, need_reset: {:?}", gname, token, conditions, need_reset);
                         if let Some(condition) = conditions {
                             if let SearchMode::Tail = condition.mode {
+                                is_tail = true;
                                 self.tail_inst_tx
                                     .send(TailLogEventEvent::Start(
                                         gname,
@@ -55,12 +59,17 @@ impl EventHandler for LogEventEventHandler {
                             } else {
                                 // TODO: try_lock()?
                                 // TODO: error handling
-                                self.tail_inst_tx
-                                    .send(TailLogEventEvent::Stop)
-                                    .await
-                                    .unwrap();
+                                if is_tail {
+                                    info!("sending TailLogEventEvent::Stop...");
+                                    self.tail_inst_tx
+                                        .send(TailLogEventEvent::Stop)
+                                        .await
+                                        .unwrap();
+                                    is_tail = false;
+                                }
                                 self.state.lock().unwrap().is_fetching = true;
                                 if need_reset {
+                                    info!("reset all state...");
                                     self.state.lock().unwrap().reset();
                                 }
                                 let (mut fetched_log_events, next_token) =

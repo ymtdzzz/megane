@@ -89,7 +89,7 @@ impl Radios {
             thirty_minutes: Radio::new("30 minutes", false),
             one_hour: Radio::new("1 hour", false),
             twelve_hourse: Radio::new("12 hours", false),
-            custom: Radio::new("custom (from to)", false),
+            custom: Radio::new("custom (from ~ to) [yyyy-MM-dd HH:mm:ss]", false),
         }
     }
 
@@ -558,7 +558,7 @@ mod tests {
             radios.get_radio(&SearchMode::TwelveHours)
         );
         assert_eq!(
-            "[ ] custom (from to)".to_string(),
+            "[ ] custom (from ~ to) [yyyy-MM-dd HH:mm:ss]".to_string(),
             radios.get_radio(&SearchMode::FromTo(None, None))
         );
     }
@@ -661,7 +661,7 @@ mod tests {
             " │[ ] 30 minutes                                │ ",
             " │[ ] 1 hour                                    │ ",
             " │[ ] 12 hours                                  │ ",
-            " │[ ] custom (from to)                          │ ",
+            " │[ ] custom (from ~ to) [yyyy-MM-dd HH:mm:ss]  │ ",
             " │┌─────────────────────┐~┌────────────────────┐│ ",
             " ││|                    │ │|                   ││ ",
             " │└─────────────────────┘ └────────────────────┘│ ",

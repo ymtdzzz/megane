@@ -21,7 +21,8 @@ lazy_static! {
 <Global>
   [TAB]   - Close/open side menu
   [Arrow] - Move focus
-  [?]     - Show/hide help
+  [?]     - Show help
+  [Q]     - Close help
   [C+Ctrl] - Exit
 
 <Side Menu>

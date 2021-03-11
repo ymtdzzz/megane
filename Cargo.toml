@@ -1,6 +1,6 @@
 [package]
 name = "megane"
-version = "0.0.7"
+version = "0.0.8"
 authors = ["zeroclock <zeroclock@icloud.com>"]
 description = "AWS Cloudwatch cli viewer"
 edition = "2018"

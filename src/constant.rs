@@ -5,6 +5,7 @@ use tui::style::{Color, Style};
 
 lazy_static! {
     pub static ref TAIL_RATE: Duration = Duration::from_secs(1);
+    pub static ref LOGEVENT_STEP: usize = 5;
     pub static ref DATE_FORMAT: String = String::from("%Y-%m-%d %H:%M:%S");
     pub static ref MORE_LOG_GROUP_NAME: String = String::from("More...");
     pub static ref MORE_LOG_GROUP_ARN: String = String::from("more");
@@ -34,8 +35,11 @@ lazy_static! {
 <Log Event>
   [Enter] - Copy the selected log event to clipboard
   [J/K] - Move cursor
+  [J+Shift/K+Shift] - Move cursor by 5
   [TAB] - Close/open current log event
   [S+Ctrl] - Open search dialog
+  [G] - Go to the first log event
+  [G+Shift] - Go to the last log event
 
 <Search Dialog>
   [Esc] - Cancel search dialog

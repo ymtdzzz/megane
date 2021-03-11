@@ -49,6 +49,33 @@ impl LogEventsState {
         }
     }
 
+    pub fn next_by(&mut self, step: usize) {
+        match self.state.selected() {
+            Some(s) => {
+                if self.events.has_items() {
+                    let mut next_p = s + step;
+                    if next_p > self.events.items().len() + 1 {
+                        next_p = self.events.items().len() + 1;
+                    }
+                    self.state.select(Some(next_p));
+                } else {
+                    self.state.select(None);
+                }
+            }
+            None => {
+                if self.events.has_items() {
+                    let mut next_p = step - 1;
+                    if next_p > self.events.items().len() {
+                        next_p = self.events.items().len();
+                    }
+                    self.state.select(Some(next_p));
+                } else {
+                    self.state.select(None)
+                }
+            }
+        }
+    }
+
     pub fn previous(&mut self) {
         match self.state.selected() {
             Some(s) => {
@@ -58,6 +85,21 @@ impl LogEventsState {
                 self.state.select(None);
             }
         };
+    }
+
+    pub fn previous_by(&mut self, step: usize) {
+        match self.state.selected() {
+            Some(s) => {
+                self.state.select(Some(s.saturating_sub(step)));
+            }
+            None => {
+                self.state.select(None);
+            }
+        }
+    }
+
+    pub fn cursor_first(&mut self) {
+        self.state.select(Some(0));
     }
 
     pub fn cursor_last(&mut self) {
@@ -130,6 +172,24 @@ mod tests {
     }
 
     #[test]
+    fn test_next_by() {
+        let mut state = LogEventsState::default();
+        state.next_by(5); // None
+        assert!(state.state.selected().is_none());
+        state.events = LogEvents::new(make_log_events(0, 9, 0));
+        state.next_by(5); // Some(4)
+        assert_eq!(Some(4), state.state.selected());
+        state.next_by(5); // Some(9) - last item
+        assert_eq!(Some(9), state.state.selected());
+        state.next_by(1); // Some(10) - 'more...' item
+        assert_eq!(Some(10), state.state.selected());
+        state.next_by(10); // Some(11) - fetch more items
+        assert_eq!(Some(11), state.state.selected());
+        state.next_by(10);
+        assert_eq!(Some(11), state.state.selected());
+    }
+
+    #[test]
     fn test_previous() {
         let mut state = LogEventsState::default();
         state.previous();
@@ -138,6 +198,26 @@ mod tests {
         state.previous();
         assert_eq!(Some(0), state.state.selected());
         state.previous();
+        assert_eq!(Some(0), state.state.selected());
+    }
+
+    #[test]
+    fn test_previous_by() {
+        let mut state = LogEventsState::default();
+        state.previous_by(10);
+        assert!(state.state.selected().is_none());
+        state.state.select(Some(4));
+        state.previous_by(2);
+        assert_eq!(Some(2), state.state.selected());
+        state.previous_by(10);
+        assert_eq!(Some(0), state.state.selected());
+    }
+
+    #[test]
+    fn test_cursor_first() {
+        let mut state = LogEventsState::default();
+        state.state.select(Some(4));
+        state.cursor_first();
         assert_eq!(Some(0), state.state.selected());
     }
 

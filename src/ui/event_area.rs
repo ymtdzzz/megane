@@ -289,14 +289,38 @@ where
                                     }
                                 }
                             }
+                            'J' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.next_by(*constant::LOGEVENT_STEP);
+                                    if !s.is_fetching && s.need_more_fetching() {
+                                        next_token = s.next_token.clone();
+                                        need_more_fetching = true;
+                                    }
+                                }
+                            }
                             'k' => {
                                 if let Ok(s) = state.as_mut() {
                                     s.previous();
                                 }
                             }
+                            'K' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.previous_by(*constant::LOGEVENT_STEP);
+                                }
+                            }
                             's' => {
                                 if let KeyModifiers::CONTROL = event.modifiers {
                                     self.selection = Selection::Search;
+                                }
+                            }
+                            'g' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.cursor_first();
+                                }
+                            }
+                            'G' => {
+                                if let Ok(s) = state.as_mut() {
+                                    s.cursor_last();
                                 }
                             }
                             _ => {}
@@ -584,11 +608,37 @@ mod tests {
         );
         assert_eq!(Some(4), event_area.state.lock().unwrap().state.selected());
         let _ = join.await.unwrap();
-        // input 'j', cursor up
+        // input 'k', cursor up
         event_area.state.lock().unwrap().state.select(Some(1));
         assert!(
             !event_area
                 .handle_event(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(0), event_area.state.lock().unwrap().state.selected());
+        event_area.state.lock().unwrap().events = LogEvents::new(make_log_events(0, 6, 0));
+        event_area.state.lock().unwrap().state.select(Some(0));
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('J'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(5), event_area.state.lock().unwrap().state.selected());
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('J'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(8), event_area.state.lock().unwrap().state.selected());
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('K'), KeyModifiers::NONE))
+                .await
+        );
+        assert_eq!(Some(3), event_area.state.lock().unwrap().state.selected());
+        assert!(
+            !event_area
+                .handle_event(KeyEvent::new(KeyCode::Char('K'), KeyModifiers::NONE))
                 .await
         );
         assert_eq!(Some(0), event_area.state.lock().unwrap().state.selected());

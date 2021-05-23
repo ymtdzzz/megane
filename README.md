@@ -51,7 +51,7 @@ megane
 megane -p your-profile -r ap-northeast-1
 ```
 
-### Using a assumed role (specified with the role's ARNO)
+### Using a assumed role (specified with the role's ARN)
 
 ```
 megane -a arn:aws:iam::account:role/role-name-with-path
